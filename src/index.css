@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Custom waveform animation */
+@keyframes wavePulse {
+  0%, 100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.animate-wave-1 {
+  animation: wavePulse 1s ease-in-out infinite;
+}
+.animate-wave-2 {
+  animation: wavePulse 1s ease-in-out infinite 0.15s;
+}
+.animate-wave-3 {
+  animation: wavePulse 1s ease-in-out infinite 0.3s;
+}
+.animate-wave-4 {
+  animation: wavePulse 1s ease-in-out infinite 0.45s;
+}
+.animate-wave-5 {
+  animation: wavePulse 1s ease-in-out infinite 0.6s;
+}
