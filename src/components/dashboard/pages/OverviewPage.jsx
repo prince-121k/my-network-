@@ -10,7 +10,8 @@ import {
   Clock, 
   CheckCircle2, 
   FolderGit2,
-  TrendingUp
+  TrendingUp,
+  Bot
 } from 'lucide-react';
 import ContactCard from '../ContactCard';
 
@@ -62,6 +63,67 @@ export default function OverviewPage({
               <span>Scan Business Card</span>
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Featured: AI Memory & Meeting Timeline Assistant */}
+      <div className="bg-white rounded-3xl p-6 sm:p-7 border border-pink-200/90 shadow-2xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-[#80235c] text-white flex items-center justify-center shadow-xs shrink-0">
+              <Bot className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-extrabold text-gray-900">
+                  AI Memory Chatbot & Meeting Timeline
+                </h3>
+                <span className="px-2 py-0.5 rounded-full bg-[#dcf786] text-gray-900 text-[10px] font-black tracking-wide uppercase">
+                  New Feature
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-gray-600 font-medium">
+                Poocho: <em>"Microsoft kab gaye the?"</em>, <em>"IIT Delhi me kya baat hui thi?"</em> ya <em>"Rohan"</em> — AI date-wise & time-wise poori timeline nikal dega!
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => onNavigateTo('chat')}
+            className="px-5 py-2.5 rounded-full bg-[#80235c] hover:bg-[#6a1b4b] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-2 shrink-0 self-start sm:self-auto hover:scale-105 active:scale-95"
+          >
+            <span>Open AI Chatbot</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Quick Suggestion Pills */}
+        <div className="pt-2 border-t border-gray-100 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Try asking:</span>
+          <button
+            onClick={() => onNavigateTo('chat')}
+            className="px-3.5 py-1.5 rounded-full bg-pink-50 hover:bg-pink-100 text-[#80235c] text-xs font-bold transition-colors border border-pink-200/70"
+          >
+            🏢 Microsoft (2 visits)
+          </button>
+          <button
+            onClick={() => onNavigateTo('chat')}
+            className="px-3.5 py-1.5 rounded-full bg-pink-50 hover:bg-pink-100 text-[#80235c] text-xs font-bold transition-colors border border-pink-200/70"
+          >
+            🏛️ IIT Delhi timeline
+          </button>
+          <button
+            onClick={() => onNavigateTo('chat')}
+            className="px-3.5 py-1.5 rounded-full bg-pink-50 hover:bg-pink-100 text-[#80235c] text-xs font-bold transition-colors border border-pink-200/70"
+          >
+            🤝 Rohan (BharatCart)
+          </button>
+          <button
+            onClick={() => onNavigateTo('chat')}
+            className="px-3.5 py-1.5 rounded-full bg-purple-50 hover:bg-purple-100 text-purple-800 text-xs font-bold transition-colors border border-purple-200/70"
+          >
+            ⚡ Pending Follow-ups
+          </button>
         </div>
       </div>
 

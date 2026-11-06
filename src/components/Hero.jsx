@@ -54,7 +54,7 @@ export default function Hero({ onOpenContact, onOpenDemo }) {
                 <div className="w-7 h-7 rounded-full bg-purple-100 flex items-center justify-center text-[#80235c]">
                   <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
                 </div>
-                <span>Try Interactive Voice Demo</span>
+                <span>Try AI Chat & Voice Demo</span>
               </button>
             </div>
 

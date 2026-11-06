@@ -12,12 +12,28 @@ import {
   Pause,
   Clock,
   Tag,
-  ArrowRight
+  ArrowRight,
+  Bot,
+  Volume2,
+  VolumeX,
+  Copy,
+  Check,
+  CheckCircle2,
+  MapPin,
+  User,
+  ExternalLink
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { INITIAL_CONTACTS } from '../hooks/useNetworkStore';
+import { generateTimelineResponse } from '../utils/memoryTimelineHelper';
 
-export default function InteractivePlayground() {
-  const [activeTab, setActiveTab] = useState('voice'); // 'voice' | 'search' | 'card'
+export default function InteractivePlayground({ onOpenDashboard }) {
+  const [activeTab, setActiveTab] = useState('chat'); // 'chat' | 'voice' | 'card' | 'search'
+  const [chatQuery, setChatQuery] = useState('Microsoft');
+  const [chatResult, setChatResult] = useState(() => generateTimelineResponse('Microsoft', INITIAL_CONTACTS));
+  const [chatAudioPlayingId, setChatAudioPlayingId] = useState(null);
+  const [chatCopiedId, setChatCopiedId] = useState(null);
+
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [selectedPreset, setSelectedPreset] = useState(0);
@@ -25,6 +41,31 @@ export default function InteractivePlayground() {
   const [searchMemoryQuery, setSearchMemoryQuery] = useState('');
   const [scanningCard, setScanningCard] = useState(false);
   const [cardScannedSuccess, setCardScannedSuccess] = useState(false);
+
+  const handleChatSearch = (q) => {
+    const target = q !== undefined ? q : chatQuery;
+    setChatQuery(target);
+    const res = generateTimelineResponse(target, INITIAL_CONTACTS);
+    setChatResult(res);
+  };
+
+  const toggleChatAudio = (id) => {
+    if (chatAudioPlayingId === id) {
+      setChatAudioPlayingId(null);
+    } else {
+      setChatAudioPlayingId(id);
+      setTimeout(() => {
+        setChatAudioPlayingId(prev => prev === id ? null : prev);
+      }, 7000);
+    }
+  };
+
+  const handleCopyChatSummary = (item) => {
+    const text = `Meeting with ${item.name} (${item.company})\nDate: ${item.date} at ${item.time}\nLocation: ${item.location}\nDiscussion:\n${(item.topicsDiscussed || []).map(t => `- ${t}`).join('\n')}\nAction Item: ${item.actionItem}`;
+    navigator.clipboard.writeText(text);
+    setChatCopiedId(item.id);
+    setTimeout(() => setChatCopiedId(null), 2000);
+  };
 
   const presets = [
     {
@@ -186,15 +227,30 @@ export default function InteractivePlayground() {
           </h2>
 
           <p className="text-base sm:text-lg text-gray-600">
-            Try recording a voice memo in Hinglish, scanning a business card, or searching your contacts by fuzzy memory.
+            Try asking our AI Chatbot about Microsoft or IIT Delhi visits, recording a Hinglish voice memo, scanning a card, or searching by memory.
           </p>
 
           {/* Tab selector */}
-          <div className="flex justify-center pt-3">
+          <div className="flex justify-center pt-3 overflow-x-auto no-scrollbar">
             <div className="bg-pink-50 p-1.5 rounded-2xl flex items-center gap-1 border border-pink-200">
               <button
+                onClick={() => setActiveTab('chat')}
+                className={`px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 ${
+                  activeTab === 'chat' 
+                    ? 'bg-[#80235c] text-white shadow-sm' 
+                    : 'text-gray-700 hover:text-[#80235c]'
+                }`}
+              >
+                <Bot className="w-4 h-4" />
+                <span>AI Memory Bot</span>
+                <span className="px-1.5 py-0.2 rounded-md bg-[#dcf786] text-gray-900 text-[10px] font-black">
+                  New
+                </span>
+              </button>
+
+              <button
                 onClick={() => setActiveTab('voice')}
-                className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 ${
+                className={`px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 ${
                   activeTab === 'voice' 
                     ? 'bg-[#80235c] text-white shadow-sm' 
                     : 'text-gray-700 hover:text-[#80235c]'
@@ -206,30 +262,307 @@ export default function InteractivePlayground() {
 
               <button
                 onClick={() => setActiveTab('card')}
-                className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 ${
+                className={`px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 ${
                   activeTab === 'card' 
                     ? 'bg-[#80235c] text-white shadow-sm' 
                     : 'text-gray-700 hover:text-[#80235c]'
                 }`}
               >
                 <Camera className="w-4 h-4" />
-                <span>Scan Business Card</span>
+                <span>Scan Card</span>
               </button>
 
               <button
                 onClick={() => setActiveTab('search')}
-                className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 ${
+                className={`px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 ${
                   activeTab === 'search' 
                     ? 'bg-[#80235c] text-white shadow-sm' 
                     : 'text-gray-700 hover:text-[#80235c]'
                 }`}
               >
                 <Search className="w-4 h-4" />
-                <span>Search by Memory</span>
+                <span>Search Memory</span>
               </button>
             </div>
           </div>
         </div>
+
+        {/* Tab 0: AI Memory Chatbot & Timeline Simulator */}
+        {activeTab === 'chat' && (
+          <div className="bg-[#fdedee] rounded-3xl p-6 sm:p-10 border border-pink-200/80 shadow-md space-y-6 animate-fadeIn">
+            
+            {/* Header & Query Input */}
+            <div className="max-w-3xl mx-auto text-center space-y-3">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white text-xs font-bold text-[#80235c] shadow-2xs border border-pink-200">
+                <Bot className="w-3.5 h-3.5" />
+                <span>AI Conversational Memory Assistant</span>
+              </div>
+
+              <h3 className="text-2xl sm:text-3xl font-extrabold text-gray-900">
+                Ask about any Company, College, or Meeting
+              </h3>
+
+              <p className="text-sm text-gray-600 font-medium">
+                Poocho: <em>"Microsoft me kab gaye the?"</em>, <em>"IIT Delhi me kya baat hui thi?"</em> ya <em>"Rohan"</em> — see exact dates, times, discussions & next steps.
+              </p>
+
+              {/* Chat Input Bar */}
+              <div className="relative pt-2 max-w-2xl mx-auto flex gap-2">
+                <div className="relative flex-1">
+                  <Bot className="absolute left-4 top-3.5 w-5 h-5 text-[#80235c]" />
+                  <input
+                    type="text"
+                    value={chatQuery}
+                    onChange={(e) => setChatQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleChatSearch();
+                    }}
+                    placeholder="Try 'Microsoft', 'IIT Delhi', 'Rohan' or 'Pending follow-ups'..."
+                    className="w-full pl-12 pr-4 py-3 rounded-2xl bg-white border border-pink-200 text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#80235c] shadow-xs"
+                  />
+                </div>
+                <button
+                  onClick={() => handleChatSearch()}
+                  className="px-5 py-3 rounded-2xl bg-[#80235c] hover:bg-[#6a1b4b] text-white font-bold text-xs sm:text-sm shadow-xs transition-all active:scale-95 shrink-0"
+                >
+                  Search Memory
+                </button>
+              </div>
+
+              {/* Quick Suggestion Chips */}
+              <div className="flex items-center justify-center gap-2 flex-wrap pt-2">
+                <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">Try quick queries:</span>
+                {[
+                  { label: '🏢 Microsoft (2 visits)', q: 'Microsoft' },
+                  { label: '🏛️ IIT Delhi timeline', q: 'IIT Delhi' },
+                  { label: '🤝 Rohan (BharatCart)', q: 'Rohan' },
+                  { label: '💼 Priya Sharma (Nexus)', q: 'Priya' },
+                  { label: '⚡ Pending Follow-ups', q: 'Pending' }
+                ].map((chip, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleChatSearch(chip.q)}
+                    className="text-xs bg-white hover:bg-pink-100 text-[#80235c] font-bold px-3 py-1.5 rounded-full border border-pink-200 transition-all hover:scale-105 shadow-2xs"
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Chatbot Response Bubble */}
+            <div className="max-w-4xl mx-auto bg-white rounded-3xl border border-pink-200/90 p-5 sm:p-7 shadow-sm space-y-5">
+              
+              {/* Bot Header & Speech text */}
+              <div className="flex items-start gap-3.5 border-b border-gray-100 pb-4">
+                <div className="w-10 h-10 rounded-2xl bg-[#80235c] text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Bot className="w-5 h-5 text-white" />
+                </div>
+                <div className="space-y-1 text-left">
+                  <div className="flex items-center gap-2">
+                    <span className="font-extrabold text-gray-900 text-sm sm:text-base">mynetworkk AI Assistant</span>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                      {chatResult.totalMatches} Visits Found
+                    </span>
+                  </div>
+                  <p className="text-xs sm:text-sm font-medium text-gray-700">
+                    {chatResult.botReply}
+                  </p>
+                </div>
+              </div>
+
+              {/* Chronological Timeline Cards */}
+              {chatResult.timeline && chatResult.timeline.length > 0 ? (
+                <div className="space-y-4 pt-1 relative before:absolute before:inset-0 before:left-5 before:w-0.5 before:bg-gradient-to-b before:from-pink-300 before:via-purple-200 before:to-pink-100 text-left">
+                  {chatResult.timeline.map((item, index) => {
+                    const isAudioPlaying = chatAudioPlayingId === item.id;
+                    const isDone = item.status === 'followed_up';
+
+                    return (
+                      <div key={item.id || index} className="relative pl-12 group">
+                        {/* Numbered Pin */}
+                        <div className="absolute left-2.5 top-3 -translate-x-1/2 w-7 h-7 rounded-full bg-white border-2 border-[#80235c] text-[#80235c] font-black text-xs flex items-center justify-center shadow-xs group-hover:bg-[#80235c] group-hover:text-white transition-colors">
+                          {index + 1}
+                        </div>
+
+                        {/* Card */}
+                        <div className="bg-pink-50/30 rounded-2xl border border-pink-200/90 p-4 sm:p-5 shadow-2xs space-y-3 hover:border-pink-300 transition-all">
+                          
+                          {/* Date, Time & Status */}
+                          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-pink-100 pb-2.5">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#fdedee] text-[#80235c] text-xs font-black">
+                                <Calendar className="w-3.5 h-3.5 text-[#80235c]" />
+                                {item.date}
+                              </span>
+
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-bold font-mono">
+                                <Clock className="w-3.5 h-3.5" />
+                                {item.time}
+                              </span>
+
+                              <span className="text-[11px] font-bold text-gray-500 uppercase">
+                                Visit #{index + 1}
+                              </span>
+                            </div>
+
+                            <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold flex items-center gap-1 ${
+                              isDone ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                            }`}>
+                              <CheckCircle2 className="w-3 h-3" />
+                              <span>{isDone ? 'Completed' : 'Follow-up Due'}</span>
+                            </span>
+                          </div>
+
+                          {/* Location & Person Met */}
+                          <div>
+                            <div className="flex items-start gap-1.5 text-xs font-bold text-purple-900 mb-1">
+                              <MapPin className="w-4 h-4 text-[#80235c] shrink-0 mt-0.5" />
+                              <span>{item.location}</span>
+                            </div>
+
+                            <div className="flex items-center gap-2 text-sm font-extrabold text-gray-900">
+                              <User className="w-4 h-4 text-gray-500" />
+                              <span>{item.name}</span>
+                              <span className="text-xs font-semibold text-gray-500">
+                                ({item.role} @ <strong className="text-gray-800">{item.company}</strong>)
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Discussion Points */}
+                          <div className="bg-white rounded-xl p-3 border border-pink-100 space-y-1.5">
+                            <span className="text-[11px] font-extrabold text-[#80235c] uppercase tracking-wider block">
+                              💬 Kya Baat Hui Thi (Key Discussion Points):
+                            </span>
+                            <ul className="space-y-1 text-xs text-gray-700 font-medium">
+                              {(item.topicsDiscussed || []).map((point, pIdx) => (
+                                <li key={pIdx} className="flex items-start gap-1.5">
+                                  <span className="text-[#80235c] font-bold">•</span>
+                                  <span>{point}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          {/* Action Items */}
+                          <div className="bg-amber-50/70 rounded-xl p-2.5 border border-amber-200/70 flex items-start gap-2">
+                            <span className="text-sm">🎯</span>
+                            <div>
+                              <span className="text-[10px] font-extrabold uppercase text-amber-800 block">
+                                Action Item / Commitment:
+                              </span>
+                              <span className="text-xs font-bold text-amber-950">
+                                {item.actionItem}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Simulated Voice Memo Playback Bar */}
+                          <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-gray-100">
+                            <button
+                              onClick={() => toggleChatAudio(item.id)}
+                              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                isAudioPlaying 
+                                  ? 'bg-[#80235c] text-white shadow-xs' 
+                                  : 'bg-pink-50 hover:bg-pink-100 text-[#80235c]'
+                              }`}
+                            >
+                              {isAudioPlaying ? (
+                                <>
+                                  <VolumeX className="w-3.5 h-3.5 animate-pulse" />
+                                  <span>Playing Audio ({item.audioDuration || '0:35'})</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Volume2 className="w-3.5 h-3.5" />
+                                  <span>Listen Voice Note ({item.audioDuration || '0:35'})</span>
+                                </>
+                              )}
+                            </button>
+
+                            <div className="flex items-center gap-1 px-2">
+                              {[12, 22, 14, 26, 8, 18, 12, 24, 16, 10].map((h, wIdx) => (
+                                <span 
+                                  key={wIdx} 
+                                  className={`w-1 rounded-full transition-all ${
+                                    isAudioPlaying ? 'bg-[#80235c] animate-bounce' : 'bg-gray-300'
+                                  }`}
+                                  style={{ 
+                                    height: isAudioPlaying ? `${h}px` : '8px',
+                                    animationDelay: `${wIdx * 60}ms` 
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Footer Actions */}
+                          <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-pink-100">
+                            <a
+                              href={`https://wa.me/?text=${encodeURIComponent(item.whatsappMessage || `Hi ${item.name.split(' ')[0]}, following up regarding our meeting!`)}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-2xs hover:scale-102 transition-all"
+                            >
+                              <MessageCircle className="w-3.5 h-3.5" />
+                              <span>WhatsApp Follow-up</span>
+                            </a>
+
+                            <button
+                              onClick={() => handleCopyChatSummary(item)}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white hover:bg-gray-100 text-gray-700 border border-gray-200 text-xs font-bold transition-colors"
+                            >
+                              {chatCopiedId === item.id ? (
+                                <>
+                                  <Check className="w-3 h-3 text-emerald-600" />
+                                  <span className="text-emerald-700">Copied!</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3 h-3" />
+                                  <span>Copy Summary</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-gray-500 text-xs">
+                  No records found for "{chatQuery}". Try searching for 'Microsoft', 'IIT Delhi', or 'Rohan'.
+                </div>
+              )}
+
+              {/* CTA to Full Dashboard */}
+              <div className="pt-3 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-pink-50/60 p-4 rounded-2xl text-left">
+                <div>
+                  <h4 className="font-extrabold text-gray-900 text-xs sm:text-sm">
+                    Want to add new voice memos and manage your real network?
+                  </h4>
+                  <p className="text-xs text-gray-500">
+                    Open the full web app with Spaces, Digital Cards, and live WhatsApp sync.
+                  </p>
+                </div>
+                {onOpenDashboard && (
+                  <button
+                    onClick={onOpenDashboard}
+                    className="px-5 py-2.5 rounded-full bg-[#80235c] hover:bg-[#6a1b4b] text-white text-xs font-bold shadow-xs hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5 shrink-0"
+                  >
+                    <span>Launch Full App</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+            </div>
+
+          </div>
+        )}
 
         {/* Tab 1: Voice Note Simulator */}
         {activeTab === 'voice' && (

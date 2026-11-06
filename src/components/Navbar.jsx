@@ -27,8 +27,12 @@ export default function Navbar({ onOpenContact, onOpenDemo, onOpenDashboard }) {
           </a>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8 text-[15px] font-medium text-gray-700">
+          <nav className="hidden md:flex items-center space-x-7 text-[15px] font-medium text-gray-700">
             <a href="#features" className="hover:text-[#80235c] transition-colors">Features</a>
+            <a href="#demo" className="hover:text-[#80235c] transition-colors flex items-center gap-1 text-[#80235c] font-bold">
+              <span>AI Chatbot</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            </a>
             <a href="#voice-notes" className="hover:text-[#80235c] transition-colors">Voice Notes</a>
             <a href="#spaces" className="hover:text-[#80235c] transition-colors">Spaces</a>
             <button 
@@ -36,10 +40,9 @@ export default function Navbar({ onOpenContact, onOpenDemo, onOpenDashboard }) {
               className="flex items-center gap-1.5 bg-[#dcf786] text-gray-900 px-3 py-1.5 rounded-full font-bold text-xs hover:bg-[#c9ea6b] transition-all shadow-2xs hover:scale-105"
             >
               <Sparkles className="w-3.5 h-3.5 text-[#80235c]" />
-              <span>Open Web App</span>
+              <span>Launch App</span>
             </button>
             <a href="#faq" className="hover:text-[#80235c] transition-colors">FAQ</a>
-            <a href="#pricing" onClick={(e) => { e.preventDefault(); onOpenContact('Pricing Inquiry'); }} className="hover:text-[#80235c] transition-colors">Pricing</a>
           </nav>
 
           {/* Right Action Buttons */}

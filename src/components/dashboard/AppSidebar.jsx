@@ -11,7 +11,8 @@ import {
   ArrowLeft,
   Sparkles,
   Search,
-  Plus
+  Plus,
+  Bot
 } from 'lucide-react';
 
 export default function AppSidebar({ 
@@ -24,6 +25,7 @@ export default function AppSidebar({
 }) {
   const navItems = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { id: 'chat', label: 'AI Memory Chat', icon: Bot, badge: 'AI Bot' },
     { id: 'contacts', label: 'Contacts', icon: Users },
     { id: 'spaces', label: 'Spaces', icon: FolderGit2 },
     { 

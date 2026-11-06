@@ -23,6 +23,7 @@ import SpacesModal from './SpacesModal';
 
 // Pages
 import OverviewPage from './pages/OverviewPage';
+import MemoryChatPage from './pages/MemoryChatPage';
 import ContactsPage from './pages/ContactsPage';
 import SpacesPage from './pages/SpacesPage';
 import RemindersPage from './pages/RemindersPage';
@@ -148,6 +149,16 @@ export default function DashboardView({ onBackToLanding }) {
             />
           )}
 
+          {/* Page 2: AI Memory Chat & Timeline Assistant */}
+          {activePage === 'chat' && (
+            <MemoryChatPage
+              contacts={contacts}
+              onToggleStatus={toggleFollowUpStatus}
+              onOpenVoiceModal={() => setVoiceModalOpen(true)}
+              onOpenCardModal={() => setCardModalOpen(true)}
+            />
+          )}
+
           {/* Page 2: Contacts Directory */}
           {activePage === 'contacts' && (
             <ContactsPage
@@ -203,6 +214,17 @@ export default function DashboardView({ onBackToLanding }) {
         </main>
 
       </div>
+
+      {/* Floating AI Assistant Shortcut */}
+      {activePage !== 'chat' && (
+        <button
+          onClick={() => setActivePage('chat')}
+          className="fixed bottom-20 lg:bottom-6 right-6 z-40 px-4 py-3 rounded-full bg-[#80235c] hover:bg-[#6a1b4b] text-white font-extrabold text-xs sm:text-sm shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2 border-2 border-white"
+        >
+          <Sparkles className="w-4 h-4 text-[#dcf786] animate-pulse" />
+          <span>Ask AI Memory Bot</span>
+        </button>
+      )}
 
       {/* Shared Action Modals */}
       <ContactDetailModal

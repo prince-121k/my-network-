@@ -84,7 +84,9 @@ export default function App() {
         />
 
         {/* 6. Live Interactive Simulator (Voice Notes, Card Scanner & Memory Search) */}
-        <InteractivePlayground />
+        <InteractivePlayground 
+          onOpenDashboard={handleOpenDashboard} 
+        />
 
         {/* 7. FAQ Section (matches user screenshot media_1792169151232_9b3fab14.png) */}
         <FaqSection 
