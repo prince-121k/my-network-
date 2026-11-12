@@ -10,6 +10,7 @@ import {
   Clock, 
   MapPin, 
   User, 
+  Users,
   MessageCircle, 
   Volume2, 
   VolumeX, 
@@ -21,7 +22,9 @@ import {
   Briefcase,
   CheckCircle2,
   ExternalLink,
-  ChevronRight
+  ChevronRight,
+  Plus,
+  Phone
 } from 'lucide-react';
 import { generateTimelineResponse } from '../../../utils/memoryTimelineHelper';
 
@@ -29,7 +32,8 @@ export default function MemoryChatPage({
   contacts = [], 
   onToggleStatus, 
   onOpenVoiceModal, 
-  onOpenCardModal 
+  onOpenCardModal,
+  onOpenAddConnection
 }) {
   const [messages, setMessages] = useState([
     {
@@ -255,197 +259,252 @@ export default function MemoryChatPage({
                 </div>
 
                 {/* Structured Timeline Cards (If bot returned timeline events) */}
-                {msg.timeline && msg.timeline.length > 0 && (
-                  <div className="space-y-4 pt-1 w-full">
-                    
-                    {/* Header Pill */}
-                    <div className="flex items-center justify-between text-xs font-bold text-gray-500 px-1">
-                      <span>CHRONOLOGICAL TIMELINE ({msg.timeline.length} VISITS FOUND)</span>
-                      <span className="text-[#80235c]">Date & Time Ordered ↓</span>
-                    </div>
+                {msg.timeline && msg.timeline.length > 0 && (() => {
+                  const uniquePeople = Array.from(
+                    new Map(msg.timeline.map(item => [item.name, item])).values()
+                  );
 
-                    {/* Timeline List */}
-                    <div className="space-y-4 relative before:absolute before:inset-0 before:left-5 before:w-0.5 before:bg-gradient-to-b before:from-pink-300 before:via-purple-200 before:to-pink-100">
-                      {msg.timeline.map((item, index) => {
-                        const isAudioPlaying = activeAudioPlayingId === item.id;
-                        const isDone = item.status === 'followed_up';
-
-                        return (
-                          <div 
-                            key={item.id || index}
-                            className="relative pl-12 group transition-all"
-                          >
-                            {/* Numbered Timeline Pin */}
-                            <div className="absolute left-2.5 top-3 -translate-x-1/2 w-7 h-7 rounded-full bg-white border-2 border-[#80235c] text-[#80235c] font-black text-xs flex items-center justify-center shadow-xs group-hover:bg-[#80235c] group-hover:text-white transition-colors">
-                              {index + 1}
+                  return (
+                    <div className="space-y-4 pt-1 w-full">
+                      
+                      {/* Connections Dossier: "Kaun Kaun Connection Me Hai" */}
+                      <div className="bg-gradient-to-br from-white via-pink-50/50 to-purple-50/40 rounded-2xl border-2 border-pink-200/90 p-4 shadow-xs space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-xl bg-[#80235c] text-white flex items-center justify-center">
+                              <Users className="w-4 h-4" />
                             </div>
+                            <div>
+                              <h4 className="text-xs font-black uppercase tracking-wider text-gray-900">
+                                Connections Met ({uniquePeople.length} People Found)
+                              </h4>
+                              <p className="text-[10px] text-gray-500 font-medium">
+                                Direct relationships recorded for {msg.query || 'this query'}
+                              </p>
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-[#dcf786] text-gray-900">
+                            Active Network
+                          </span>
+                        </div>
 
-                            {/* Timeline Card */}
-                            <div className="bg-white rounded-2xl border border-pink-200/90 hover:border-pink-300 p-4 sm:p-5 shadow-xs space-y-3.5 transition-all">
-                              
-                              {/* Top Bar: Date, Time & Status */}
-                              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-2.5">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  {/* Date Badge */}
-                                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#fdedee] text-[#80235c] text-xs font-black tracking-wide">
-                                    <Calendar className="w-3.5 h-3.5 text-[#80235c]" />
-                                    {item.date}
-                                  </span>
-
-                                  {/* Time Badge */}
-                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-bold font-mono">
-                                    <Clock className="w-3.5 h-3.5" />
-                                    {item.time}
-                                  </span>
-
-                                  {/* Visit Tag */}
-                                  <span className="text-[11px] font-bold text-gray-500 uppercase">
-                                    Visit #{index + 1}
-                                  </span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                          {uniquePeople.map((person, pIdx) => (
+                            <div key={pIdx} className="bg-white rounded-xl border border-pink-200/70 p-3 flex items-center justify-between gap-2 shadow-2xs hover:shadow-xs transition-all">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-600 to-[#80235c] text-white font-bold text-xs flex items-center justify-center shrink-0">
+                                  {person.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                                 </div>
-
-                                {/* Status Tag */}
-                                <button
-                                  onClick={() => onToggleStatus && onToggleStatus(item.contactId || item.id)}
-                                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold flex items-center gap-1 transition-all ${
-                                    isDone 
-                                      ? 'bg-emerald-100 text-emerald-800' 
-                                      : 'bg-amber-100 text-amber-800 hover:bg-emerald-100'
-                                  }`}
-                                  title="Click to toggle status"
-                                >
-                                  <CheckCircle2 className="w-3 h-3" />
-                                  <span>{isDone ? 'Completed' : 'Follow-up Due'}</span>
-                                </button>
-                              </div>
-
-                              {/* Venue & Person Met */}
-                              <div>
-                                <div className="flex items-start gap-1.5 text-xs font-bold text-purple-900 mb-1">
-                                  <MapPin className="w-4 h-4 text-[#80235c] shrink-0 mt-0.5" />
-                                  <span>{item.location}</span>
-                                </div>
-
-                                <div className="flex items-center gap-2 text-sm font-extrabold text-gray-900">
-                                  <User className="w-4 h-4 text-gray-500" />
-                                  <span>{item.name}</span>
-                                  <span className="text-xs font-semibold text-gray-500">
-                                    ({item.role} @ <strong className="text-gray-800">{item.company}</strong>)
-                                  </span>
+                                <div className="min-w-0">
+                                  <p className="text-xs font-bold text-gray-900 truncate">{person.name}</p>
+                                  <p className="text-[10px] text-gray-500 truncate">{person.role} • <strong className="text-gray-700">{person.company}</strong></p>
                                 </div>
                               </div>
-
-                              {/* What was discussed: "Kya baat hui thi" */}
-                              <div className="bg-pink-50/50 rounded-xl p-3 border border-pink-100/80 space-y-1.5">
-                                <span className="text-[11px] font-extrabold text-[#80235c] uppercase tracking-wider block">
-                                  💬 Kya Baat Hui Thi (Key Discussion Points):
-                                </span>
-                                <ul className="space-y-1 text-xs text-gray-700 font-medium">
-                                  {(item.topicsDiscussed || []).map((point, pIdx) => (
-                                    <li key={pIdx} className="flex items-start gap-1.5">
-                                      <span className="text-[#80235c] font-bold leading-tight">•</span>
-                                      <span>{point}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-
-                              {/* Action Items / Commitments */}
-                              <div className="bg-amber-50/60 rounded-xl p-2.5 border border-amber-200/60 flex items-start gap-2">
-                                <span className="text-sm">🎯</span>
-                                <div>
-                                  <span className="text-[10px] font-extrabold uppercase text-amber-800 block">
-                                    Action Item & Commitment:
-                                  </span>
-                                  <span className="text-xs font-bold text-amber-950">
-                                    {item.actionItem}
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* Simulated Voice Memo Playback Bar */}
-                              <div className="flex items-center justify-between p-2 rounded-xl bg-gray-50 border border-gray-100">
-                                <button
-                                  onClick={() => togglePlayAudio(item.id)}
-                                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                                    isAudioPlaying 
-                                      ? 'bg-[#80235c] text-white shadow-xs' 
-                                      : 'bg-white hover:bg-pink-50 text-gray-700 border border-gray-200'
-                                  }`}
-                                >
-                                  {isAudioPlaying ? (
-                                    <>
-                                      <VolumeX className="w-3.5 h-3.5 animate-pulse" />
-                                      <span>Playing Memo ({item.audioDuration || '0:35'})</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Volume2 className="w-3.5 h-3.5 text-[#80235c]" />
-                                      <span>Play Voice Memo ({item.audioDuration || '0:35'})</span>
-                                    </>
-                                  )}
-                                </button>
-
-                                {/* Animated Audio Waveform */}
-                                <div className="flex items-center gap-1 px-2">
-                                  {[12, 24, 16, 28, 8, 20, 14, 26, 18, 10].map((h, wIdx) => (
-                                    <span 
-                                      key={wIdx} 
-                                      className={`w-1 rounded-full transition-all duration-300 ${
-                                        isAudioPlaying 
-                                          ? 'bg-[#80235c] animate-bounce' 
-                                          : 'bg-gray-300'
-                                      }`}
-                                      style={{ 
-                                        height: isAudioPlaying ? `${h}px` : '10px',
-                                        animationDelay: `${wIdx * 60}ms` 
-                                      }}
-                                    />
-                                  ))}
-                                </div>
-                              </div>
-
-                              {/* Action Footer Buttons (WhatsApp, Copy, Contact) */}
-                              <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-gray-100">
+                              <div className="flex items-center gap-1 shrink-0">
                                 <a
-                                  href={`https://wa.me/?text=${encodeURIComponent(item.whatsappMessage || `Hi ${item.name.split(' ')[0]}, following up regarding our meeting!`)}`}
+                                  href={`https://wa.me/?text=${encodeURIComponent(person.whatsappMessage || `Hi ${person.name.split(' ')[0]}, following up regarding our meeting!`)}`}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-2xs hover:scale-102 transition-all"
+                                  className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
+                                  title="Chat on WhatsApp"
                                 >
                                   <MessageCircle className="w-3.5 h-3.5" />
-                                  <span>WhatsApp Follow-up</span>
                                 </a>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
 
-                                <div className="flex items-center gap-1.5">
+                      {/* Header Pill */}
+                      <div className="flex items-center justify-between text-xs font-bold text-gray-500 px-1 pt-1">
+                        <span>CHRONOLOGICAL TIMELINE ({msg.timeline.length} VISITS FOUND)</span>
+                        <span className="text-[#80235c]">Date & Time Ordered ↓</span>
+                      </div>
+
+                      {/* Timeline List */}
+                      <div className="space-y-4 relative before:absolute before:inset-0 before:left-5 before:w-0.5 before:bg-gradient-to-b before:from-pink-300 before:via-purple-200 before:to-pink-100">
+                        {msg.timeline.map((item, index) => {
+                          const isAudioPlaying = activeAudioPlayingId === item.id;
+                          const isDone = item.status === 'followed_up';
+
+                          return (
+                            <div 
+                              key={item.id || index}
+                              className="relative pl-12 group transition-all"
+                            >
+                              {/* Numbered Timeline Pin */}
+                              <div className="absolute left-2.5 top-3 -translate-x-1/2 w-7 h-7 rounded-full bg-white border-2 border-[#80235c] text-[#80235c] font-black text-xs flex items-center justify-center shadow-xs group-hover:bg-[#80235c] group-hover:text-white transition-colors">
+                                {index + 1}
+                              </div>
+
+                              {/* Timeline Card */}
+                              <div className="bg-white rounded-2xl border border-pink-200/90 hover:border-pink-300 p-4 sm:p-5 shadow-xs space-y-3.5 transition-all">
+                                
+                                {/* Top Bar: Date, Time & Status */}
+                                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-2.5">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    {/* Date Badge */}
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#fdedee] text-[#80235c] text-xs font-black tracking-wide">
+                                      <Calendar className="w-3.5 h-3.5 text-[#80235c]" />
+                                      {item.date}
+                                    </span>
+
+                                    {/* Time Badge */}
+                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-bold font-mono">
+                                      <Clock className="w-3.5 h-3.5" />
+                                      {item.time}
+                                    </span>
+
+                                    {/* Visit Tag */}
+                                    <span className="text-[11px] font-bold text-gray-500 uppercase">
+                                      Visit #{index + 1}
+                                    </span>
+                                  </div>
+
+                                  {/* Status Tag */}
                                   <button
-                                    onClick={() => handleCopy(item)}
-                                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition-colors"
-                                    title="Copy meeting summary"
+                                    onClick={() => onToggleStatus && onToggleStatus(item.contactId || item.id)}
+                                    className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold flex items-center gap-1 transition-all ${
+                                      isDone 
+                                        ? 'bg-emerald-100 text-emerald-800' 
+                                        : 'bg-amber-100 text-amber-800 hover:bg-emerald-100'
+                                    }`}
+                                    title="Click to toggle status"
                                   >
-                                    {copiedId === item.id ? (
+                                    <CheckCircle2 className="w-3 h-3" />
+                                    <span>{isDone ? 'Completed' : 'Follow-up Due'}</span>
+                                  </button>
+                                </div>
+
+                                {/* Venue & Person Met */}
+                                <div>
+                                  <div className="flex items-start gap-1.5 text-xs font-bold text-purple-900 mb-1">
+                                    <MapPin className="w-4 h-4 text-[#80235c] shrink-0 mt-0.5" />
+                                    <span>{item.location}</span>
+                                  </div>
+
+                                  <div className="flex items-center gap-2 text-sm font-extrabold text-gray-900">
+                                    <User className="w-4 h-4 text-gray-500" />
+                                    <span>{item.name}</span>
+                                    <span className="text-xs font-semibold text-gray-500">
+                                      ({item.role} @ <strong className="text-gray-800">{item.company}</strong>)
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* What was discussed: "Kya baat hui thi" */}
+                                <div className="bg-pink-50/50 rounded-xl p-3 border border-pink-100/80 space-y-1.5">
+                                  <span className="text-[11px] font-extrabold text-[#80235c] uppercase tracking-wider block">
+                                    💬 Kya Baat Hui Thi (Key Discussion Points):
+                                  </span>
+                                  <ul className="space-y-1 text-xs text-gray-700 font-medium">
+                                    {(item.topicsDiscussed || []).map((point, pIdx) => (
+                                      <li key={pIdx} className="flex items-start gap-1.5">
+                                        <span className="text-[#80235c] font-bold leading-tight">•</span>
+                                        <span>{point}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+
+                                {/* Action Items / Commitments */}
+                                <div className="bg-amber-50/60 rounded-xl p-2.5 border border-amber-200/60 flex items-start gap-2">
+                                  <span className="text-sm">🎯</span>
+                                  <div>
+                                    <span className="text-[10px] font-extrabold uppercase text-amber-800 block">
+                                      Action Item & Commitment:
+                                    </span>
+                                    <span className="text-xs font-bold text-amber-950">
+                                      {item.actionItem}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Simulated Voice Memo Playback Bar */}
+                                <div className="flex items-center justify-between p-2 rounded-xl bg-gray-50 border border-gray-100">
+                                  <button
+                                    onClick={() => togglePlayAudio(item.id)}
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                      isAudioPlaying 
+                                        ? 'bg-[#80235c] text-white shadow-xs' 
+                                        : 'bg-white hover:bg-pink-50 text-gray-700 border border-gray-200'
+                                    }`}
+                                  >
+                                    {isAudioPlaying ? (
                                       <>
-                                        <Check className="w-3 h-3 text-emerald-600" />
-                                        <span className="text-emerald-700">Copied!</span>
+                                        <VolumeX className="w-3.5 h-3.5 animate-pulse" />
+                                        <span>Playing Memo ({item.audioDuration || '0:35'})</span>
                                       </>
                                     ) : (
                                       <>
-                                        <Copy className="w-3 h-3" />
-                                        <span>Copy Details</span>
+                                        <Volume2 className="w-3.5 h-3.5 text-[#80235c]" />
+                                        <span>Play Voice Memo ({item.audioDuration || '0:35'})</span>
                                       </>
                                     )}
                                   </button>
+
+                                  {/* Animated Audio Waveform */}
+                                  <div className="flex items-center gap-1 px-2">
+                                    {[12, 24, 16, 28, 8, 20, 14, 26, 18, 10].map((h, wIdx) => (
+                                      <span 
+                                        key={wIdx} 
+                                        className={`w-1 rounded-full transition-all duration-300 ${
+                                          isAudioPlaying 
+                                            ? 'bg-[#80235c] animate-bounce' 
+                                            : 'bg-gray-300'
+                                        }`}
+                                        style={{ 
+                                          height: isAudioPlaying ? `${h}px` : '10px',
+                                          animationDelay: `${wIdx * 60}ms` 
+                                        }}
+                                      />
+                                    ))}
+                                  </div>
                                 </div>
+
+                                {/* Action Footer Buttons (WhatsApp, Copy, Contact) */}
+                                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-gray-100">
+                                  <a
+                                    href={`https://wa.me/?text=${encodeURIComponent(item.whatsappMessage || `Hi ${item.name.split(' ')[0]}, following up regarding our meeting!`)}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-2xs hover:scale-102 transition-all"
+                                  >
+                                    <MessageCircle className="w-3.5 h-3.5" />
+                                    <span>WhatsApp Follow-up</span>
+                                  </a>
+
+                                  <div className="flex items-center gap-1.5">
+                                    <button
+                                      onClick={() => handleCopy(item)}
+                                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition-colors"
+                                      title="Copy meeting summary"
+                                    >
+                                      {copiedId === item.id ? (
+                                        <>
+                                          <Check className="w-3 h-3 text-emerald-600" />
+                                          <span className="text-emerald-700">Copied!</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Copy className="w-3 h-3" />
+                                          <span>Copy Details</span>
+                                        </>
+                                      )}
+                                    </button>
+                                  </div>
+                                </div>
+
                               </div>
-
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
 
-                  </div>
-                )}
+                    </div>
+                  );
+                })()}
 
                 {/* If no match found, show Quick Capture CTA */}
                 {msg.timeline && msg.timeline.length === 0 && (

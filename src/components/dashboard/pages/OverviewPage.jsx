@@ -11,7 +11,8 @@ import {
   CheckCircle2, 
   FolderGit2,
   TrendingUp,
-  Bot
+  Bot,
+  Plus
 } from 'lucide-react';
 import ContactCard from '../ContactCard';
 
@@ -22,6 +23,7 @@ export default function OverviewPage({
   onToggleStatus, 
   onOpenVoiceModal, 
   onOpenCardModal, 
+  onOpenAddConnection,
   onNavigateTo 
 }) {
   const pendingFollowups = contacts.filter(c => c.status !== 'followed_up');
@@ -43,24 +45,32 @@ export default function OverviewPage({
           </h2>
 
           <p className="text-sm sm:text-base text-gray-700 font-medium leading-relaxed">
-            You have <strong className="text-[#80235c]">{pendingFollowups.length} follow-ups</strong> waiting for attention. Met someone new today? Record a 15-second voice memo to capture the context.
+            You have <strong className="text-[#80235c]">{pendingFollowups.length} follow-ups</strong> waiting for attention. Met someone new today? Record high-gain voice memo or fill contact details.
           </p>
 
           <div className="flex flex-wrap gap-3 pt-2">
             <button
-              onClick={onOpenVoiceModal}
+              onClick={onOpenAddConnection || onOpenVoiceModal}
               className="px-6 py-3 rounded-full bg-[#80235c] hover:bg-[#6a1b4b] text-white font-bold text-xs sm:text-sm shadow-md hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
             >
-              <Mic className="w-4 h-4 animate-pulse" />
-              <span>Record Meeting Voice Memo</span>
+              <Plus className="w-4 h-4" />
+              <span>+ Add New Connection</span>
+            </button>
+
+            <button
+              onClick={onOpenVoiceModal}
+              className="px-5 py-3 rounded-full bg-white hover:bg-pink-50 text-[#80235c] border border-pink-200 font-bold text-xs sm:text-sm shadow-2xs hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+            >
+              <Mic className="w-4 h-4 animate-pulse text-[#80235c]" />
+              <span>Voice Memo (High-Sensitivity)</span>
             </button>
 
             <button
               onClick={onOpenCardModal}
-              className="px-5 py-3 rounded-full bg-white hover:bg-gray-50 text-gray-800 border border-gray-200 font-bold text-xs sm:text-sm shadow-2xs transition-all flex items-center gap-2"
+              className="px-4 py-3 rounded-full bg-white hover:bg-gray-50 text-gray-800 border border-gray-200 font-bold text-xs sm:text-sm shadow-2xs transition-all flex items-center gap-1.5"
             >
               <Camera className="w-4 h-4 text-purple-700" />
-              <span>Scan Business Card</span>
+              <span>Scan Card</span>
             </button>
           </div>
         </div>

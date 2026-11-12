@@ -1,5 +1,64 @@
 import { useState, useEffect } from 'react';
 
+export const DEFAULT_USER = {
+  id: 'usr_founder',
+  name: 'Prince Kumar Pandey',
+  email: 'princepandey.contact@gmail.com',
+  phone: '+91 98765 43210',
+  role: 'Founder & Lead Architect',
+  college: 'Dronacharya College of Engineering / DPG',
+  bio: 'Building mynetworkk.ai — Multimodal AI Relationship Intelligence Platform.',
+  avatar: 'PK',
+  linkedin: 'https://linkedin.com/in/prince-pandey',
+  instagram: '@prince.pandey',
+  status: 'active', // 'active' | 'blocked'
+  isFounder: true,
+  createdAt: '2024-06-01'
+};
+
+export const INITIAL_USERS = [
+  DEFAULT_USER,
+  {
+    id: 'usr_2',
+    name: 'Ananya Sharma',
+    email: 'ananya.s@techinnovate.io',
+    phone: '+91 98112 23344',
+    role: 'Pro Member',
+    college: 'IIT Delhi',
+    status: 'active',
+    lastLogin: '2024-11-12 18:32',
+    device: 'iPhone 15 • Chrome Mobile',
+    totalContacts: 42,
+    isFounder: false
+  },
+  {
+    id: 'usr_3',
+    name: 'Rohan Verma',
+    email: 'rohan.v@delhiventures.com',
+    phone: '+91 99887 11223',
+    role: 'Pro Member',
+    college: 'DTU Delhi',
+    status: 'active',
+    lastLogin: '2024-11-12 20:15',
+    device: 'MacBook Pro • Chrome',
+    totalContacts: 85,
+    isFounder: false
+  },
+  {
+    id: 'usr_4',
+    name: 'Devansh Gupta',
+    email: 'devansh.spam@tempmail.com',
+    phone: '+91 98777 66554',
+    role: 'Free Member',
+    college: 'Delhi University',
+    status: 'blocked',
+    lastLogin: '2024-11-10 14:02',
+    device: 'Windows 11 • Edge',
+    totalContacts: 3,
+    isFounder: false
+  }
+];
+
 export const INITIAL_CONTACTS = [
   // --- MICROSOFT VISITS ---
   {
@@ -20,6 +79,8 @@ export const INITIAL_CONTACTS = [
     whatsappMessage: 'Hi Sameer, following up on our meeting at Microsoft Reactor Bengaluru regarding Azure OpenAI credits and architecture.',
     phone: '+91 98112 34567',
     email: 'sameer.verma@microsoft.com',
+    linkedin: 'https://linkedin.com/in/sameer-verma-msft',
+    instagram: '@sameer.cloud',
     createdAt: '2024-08-12T15:30:00Z',
     status: 'followed_up',
     audioDuration: '0:42',
@@ -48,6 +109,7 @@ export const INITIAL_CONTACTS = [
     whatsappMessage: 'Hi Ananya, great meeting you at the Microsoft booth during TechSparks! Confirming our slot for the Reactor Gurgaon Demo Day.',
     phone: '+91 98223 45678',
     email: 'ananya.rao@microsoft.com',
+    linkedin: 'https://linkedin.com/in/ananya-rao-startups',
     createdAt: '2024-09-28T11:15:00Z',
     status: 'pending',
     audioDuration: '0:38',
@@ -78,6 +140,7 @@ export const INITIAL_CONTACTS = [
     whatsappMessage: 'Respected Prof. Sharma, thank you for meeting at IIT Delhi E-Summit. Sharing our FITT incubation proposal and prototype link: https://mynetworkkai1.netlify.app/',
     phone: '+91 98101 23456',
     email: 'r.sharma@fitt-iitd.in',
+    linkedin: 'https://linkedin.com/in/prof-r-sharma-iitd',
     createdAt: '2024-10-05T10:00:00Z',
     status: 'followed_up',
     audioDuration: '0:50',
@@ -106,6 +169,7 @@ export const INITIAL_CONTACTS = [
     whatsappMessage: 'Hi Dr. Sen, great meeting at Bharti School AI Lab yesterday. Here are the audio sample benchmarks for Hinglish transcription tests.',
     phone: '+91 98711 98765',
     email: 'arpit.sen@ee.iitd.ac.in',
+    linkedin: 'https://linkedin.com/in/dr-arpit-sen-ai',
     createdAt: '2024-11-14T14:30:00Z',
     status: 'pending',
     audioDuration: '0:45',
@@ -136,6 +200,7 @@ export const INITIAL_CONTACTS = [
     whatsappMessage: 'Hi Rohan, great meeting you at Delhi Startup Summit! Sharing our pitch deck and sample SDK documentation as discussed.',
     phone: '+91 98765 43210',
     email: 'rohan@bharatcart.in',
+    linkedin: 'https://linkedin.com/in/rohan-bharatcart',
     photoUrl: '/assets/media_1792169151282_168d2625.png',
     createdAt: '2024-06-20T10:30:00Z',
     status: 'pending',
@@ -167,6 +232,7 @@ export const INITIAL_CONTACTS = [
     whatsappMessage: 'Hey Alex! Loved our chat at DesignUp about analog cameras and design systems. Looking forward to showing you our onboarding flow!',
     phone: '+1 555 019 2831',
     email: 'alex@flowloop.com',
+    linkedin: 'https://linkedin.com/in/alex-morgan-design',
     createdAt: '2024-06-21T14:15:00Z',
     status: 'pending',
     audioDuration: '0:28',
@@ -197,6 +263,7 @@ export const INITIAL_CONTACTS = [
     whatsappMessage: 'Hi Priya, it was wonderful speaking with you at the founders dinner. Here are our MRR highlights and my calendar link for our call: https://cal.com/mynetworkk',
     phone: '+91 99887 76655',
     email: 'priya.sharma@nexusventures.com',
+    linkedin: 'https://linkedin.com/in/priya-sharma-investor',
     createdAt: '2024-06-22T20:00:00Z',
     status: 'followed_up',
     audioDuration: '0:40',
@@ -217,13 +284,33 @@ export const INITIAL_SPACES = [
 ];
 
 export function useNetworkStore() {
+  // Current Authenticated User Session
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('mynetworkk_current_user');
+      return saved ? JSON.parse(saved) : DEFAULT_USER;
+    } catch (e) {
+      return DEFAULT_USER;
+    }
+  });
+
+  // Registered Users Directory (for Founder / Admin Portal)
+  const [users, setUsers] = useState(() => {
+    try {
+      const saved = localStorage.getItem('mynetworkk_users');
+      return saved ? JSON.parse(saved) : INITIAL_USERS;
+    } catch (e) {
+      return INITIAL_USERS;
+    }
+  });
+
+  // Contacts Vault
   const [contacts, setContacts] = useState(() => {
     try {
       const saved = localStorage.getItem('mynetworkk_contacts');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          // Merge rich INITIAL_CONTACTS if any key demo contact (e.g., Microsoft or IIT Delhi) is missing
           const existingIds = new Set(parsed.map(c => c.id));
           const missingDefaults = INITIAL_CONTACTS.filter(c => !existingIds.has(c.id));
           if (missingDefaults.length > 0) {
@@ -240,6 +327,7 @@ export function useNetworkStore() {
     }
   });
 
+  // Event Spaces
   const [spaces, setSpaces] = useState(() => {
     try {
       const saved = localStorage.getItem('mynetworkk_spaces');
@@ -252,7 +340,19 @@ export function useNetworkStore() {
   const [selectedSpaceId, setSelectedSpaceId] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Save to localStorage on change
+  // Save changes to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('mynetworkk_current_user', JSON.stringify(currentUser));
+    } catch (e) {}
+  }, [currentUser]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('mynetworkk_users', JSON.stringify(users));
+    } catch (e) {}
+  }, [users]);
+
   useEffect(() => {
     try {
       localStorage.setItem('mynetworkk_contacts', JSON.stringify(contacts));
@@ -265,17 +365,114 @@ export function useNetworkStore() {
     } catch (e) {}
   }, [spaces]);
 
+  // Auth & Profile Handlers
+  const loginWithOTP = (identifier, profileData = {}) => {
+    // Check if user is blocked
+    const existing = users.find(u => u.email === identifier || u.phone === identifier);
+    if (existing && existing.status === 'blocked') {
+      return { success: false, error: 'Account is blocked by Founder/Admin.' };
+    }
+
+    const userObj = existing ? { ...existing, ...profileData, lastLogin: 'Just now' } : {
+      id: 'usr_' + Date.now(),
+      name: profileData.name || 'New Member',
+      email: identifier.includes('@') ? identifier : '',
+      phone: !identifier.includes('@') ? identifier : '',
+      role: profileData.role || 'Member',
+      college: profileData.college || '',
+      bio: profileData.bio || 'Networking via mynetworkk.ai',
+      avatar: (profileData.name || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase(),
+      linkedin: profileData.linkedin || '',
+      instagram: profileData.instagram || '',
+      status: 'active',
+      isFounder: false,
+      lastLogin: 'Just now',
+      device: 'Web Client',
+      totalContacts: 0
+    };
+
+    setCurrentUser(userObj);
+    setUsers(prev => {
+      const filtered = prev.filter(u => u.id !== userObj.id);
+      return [userObj, ...filtered];
+    });
+
+    return { success: true, user: userObj };
+  };
+
+  const updateProfile = (updates) => {
+    setCurrentUser(prev => {
+      const updated = { ...prev, ...updates };
+      setUsers(all => all.map(u => u.id === updated.id ? updated : u));
+      return updated;
+    });
+  };
+
+  const logout = () => {
+    setCurrentUser(null);
+  };
+
+  // Founder User Management
+  const toggleBlockUser = (userId) => {
+    setUsers(prev => prev.map(u => {
+      if (u.id === userId) {
+        const nextStatus = u.status === 'blocked' ? 'active' : 'blocked';
+        if (currentUser && currentUser.id === userId) {
+          setCurrentUser({ ...currentUser, status: nextStatus });
+        }
+        return { ...u, status: nextStatus };
+      }
+      return u;
+    }));
+  };
+
+  const deleteUser = (userId) => {
+    setUsers(prev => prev.filter(u => u.id !== userId));
+    if (currentUser && currentUser.id === userId) {
+      setCurrentUser(DEFAULT_USER);
+    }
+  };
+
+  const switchUser = (userObj) => {
+    setCurrentUser(userObj);
+  };
+
+  // Contact Handlers
   const addContact = (newContact) => {
-    // Fill default displayDate and time if not present
     const enriched = {
-      ...newContact,
+      id: newContact.id || 'conn_' + Date.now(),
+      name: newContact.name || 'Unnamed Contact',
+      role: newContact.role || 'Professional',
+      company: newContact.company || 'Direct Network',
+      event: newContact.event || 'Direct Interaction',
+      location: newContact.location || newContact.event || 'In-person Meeting',
+      phone: newContact.phone || '',
+      email: newContact.email || '',
+      linkedin: newContact.linkedin || '',
+      instagram: newContact.instagram || '',
+      tags: newContact.tags || ['Direct'],
+      spaceId: newContact.spaceId || selectedSpaceId || 'all',
+      rawNotes: newContact.rawNotes || newContact.notes || '',
+      topicsDiscussed: newContact.topicsDiscussed || (newContact.rawNotes ? [newContact.rawNotes] : ['Initial connection established.']),
+      actionItem: newContact.actionItem || 'Follow up on WhatsApp/Email.',
+      followUpDate: newContact.followUpDate || 'Monday, 10:00 AM',
+      whatsappMessage: newContact.whatsappMessage || `Hi ${newContact.name ? newContact.name.split(' ')[0] : 'there'}, great connecting with you!`,
+      status: newContact.status || 'pending',
+      audioUrl: newContact.audioUrl || null,
+      audioDuration: newContact.audioDuration || '0:30',
       displayDate: newContact.displayDate || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
       displayTime: newContact.displayTime || new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
       visitDate: newContact.visitDate || new Date().toISOString().split('T')[0],
-      topicsDiscussed: newContact.topicsDiscussed || (newContact.rawNotes ? [newContact.rawNotes] : ['Initial meeting notes recorded.']),
-      commitmentsMade: newContact.commitmentsMade || newContact.actionItem || 'Follow up as agreed.'
+      createdAt: newContact.createdAt || new Date().toISOString()
     };
     setContacts(prev => [enriched, ...prev]);
+
+    // Update current user total count
+    if (currentUser) {
+      updateProfile({ totalContacts: (currentUser.totalContacts || 0) + 1 });
+    }
+
+    return enriched;
   };
 
   const deleteContact = (id) => {
@@ -312,7 +509,7 @@ export function useNetworkStore() {
 
   // Real CSV Export
   const exportToCSV = () => {
-    const headers = ['Name', 'Role', 'Company', 'Event', 'Date', 'Time', 'Location', 'Phone', 'Email', 'Tags', 'Action Item', 'Status', 'Notes'];
+    const headers = ['Name', 'Role', 'Company', 'Event', 'Date', 'Time', 'Location', 'Phone', 'Email', 'LinkedIn', 'Tags', 'Action Item', 'Status', 'Notes'];
     const rows = contacts.map(c => [
       `"${c.name}"`,
       `"${c.role || ''}"`,
@@ -323,6 +520,7 @@ export function useNetworkStore() {
       `"${(c.location || '').replace(/"/g, '""')}"`,
       `"${c.phone || ''}"`,
       `"${c.email || ''}"`,
+      `"${c.linkedin || ''}"`,
       `"${(c.tags || []).join(', ')}"`,
       `"${c.actionItem || ''}"`,
       `"${c.status || 'pending'}"`,
@@ -339,7 +537,7 @@ export function useNetworkStore() {
     document.body.removeChild(link);
   };
 
-  // Filtered contacts by search & space
+  // Filtered contacts
   const filteredContacts = contacts.filter(c => {
     const matchesSpace = selectedSpaceId === 'all' || c.spaceId === selectedSpaceId;
     if (!matchesSpace) return false;
@@ -358,6 +556,8 @@ export function useNetworkStore() {
   });
 
   return {
+    currentUser,
+    users,
     contacts,
     spaces,
     selectedSpaceId,
@@ -365,6 +565,12 @@ export function useNetworkStore() {
     searchQuery,
     setSearchQuery,
     filteredContacts,
+    loginWithOTP,
+    updateProfile,
+    logout,
+    toggleBlockUser,
+    deleteUser,
+    switchUser,
     addContact,
     deleteContact,
     updateContact,

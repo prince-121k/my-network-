@@ -12,7 +12,9 @@ import {
   Clock, 
   CheckCircle2,
   Filter,
-  Bell
+  Bell,
+  Crown,
+  UserCheck
 } from 'lucide-react';
 import { useNetworkStore } from '../../hooks/useNetworkStore';
 import AppSidebar from './AppSidebar';
@@ -20,6 +22,8 @@ import ContactDetailModal from './ContactDetailModal';
 import VoiceRecorderModal from './VoiceRecorderModal';
 import CardScannerModal from './CardScannerModal';
 import SpacesModal from './SpacesModal';
+import AuthModal from './AuthModal';
+import AddConnectionModal from './AddConnectionModal';
 
 // Pages
 import OverviewPage from './pages/OverviewPage';
@@ -29,6 +33,7 @@ import SpacesPage from './pages/SpacesPage';
 import RemindersPage from './pages/RemindersPage';
 import DigitalCardPage from './pages/DigitalCardPage';
 import NetworkMapPage from './pages/NetworkMapPage';
+import FounderAdminPage from './pages/FounderAdminPage';
 
 export default function DashboardView({ onBackToLanding }) {
   const {
@@ -44,14 +49,24 @@ export default function DashboardView({ onBackToLanding }) {
     updateContact,
     toggleFollowUpStatus,
     addSpace,
-    exportToCSV
+    exportToCSV,
+    currentUser,
+    users,
+    loginWithOTP,
+    updateProfile,
+    logout,
+    toggleBlockUser,
+    deleteUser,
+    switchUser
   } = useNetworkStore();
 
-  const [activePage, setActivePage] = useState('overview'); // 'overview' | 'contacts' | 'spaces' | 'reminders' | 'digital-card' | 'network-map'
+  const [activePage, setActivePage] = useState('overview'); // 'overview' | 'contacts' | 'spaces' | 'reminders' | 'digital-card' | 'network-map' | 'founder'
   const [selectedContact, setSelectedContact] = useState(null);
   const [voiceModalOpen, setVoiceModalOpen] = useState(false);
   const [cardModalOpen, setCardModalOpen] = useState(false);
   const [spacesModalOpen, setSpacesModalOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [addConnectionModalOpen, setAddConnectionModalOpen] = useState(false);
 
   const pendingCount = contacts.filter(c => c.status !== 'followed_up').length;
 
@@ -65,6 +80,9 @@ export default function DashboardView({ onBackToLanding }) {
         onBackToLanding={onBackToLanding}
         onOpenVoiceModal={() => setVoiceModalOpen(true)}
         onOpenCardModal={() => setCardModalOpen(true)}
+        onOpenAddConnectionModal={() => setAddConnectionModalOpen(true)}
+        onOpenAuthModal={() => setAuthModalOpen(true)}
+        currentUser={currentUser}
         pendingFollowUpsCount={pendingCount}
       />
 
@@ -105,29 +123,50 @@ export default function DashboardView({ onBackToLanding }) {
 
           {/* Right Header Controls */}
           <div className="flex items-center gap-2 sm:gap-3 ml-auto">
+            {/* Quick Add Connection Button */}
             <button
-              onClick={exportToCSV}
-              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-[#80235c] transition-colors"
-              title="Download full CSV"
+              onClick={() => setAddConnectionModalOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#80235c] hover:bg-[#6a1b4b] text-white text-xs font-bold shadow-xs transition-all active:scale-95"
+              title="Add a new contact with full details, voice & context"
             >
-              <Download className="w-3.5 h-3.5" />
-              <span>Export CSV</span>
-            </button>
-
-            <button
-              onClick={() => setCardModalOpen(true)}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-pink-200 text-[#80235c] text-xs font-bold hover:bg-pink-50 transition-colors"
-            >
-              <Camera className="w-3.5 h-3.5" />
-              <span>Scan Card</span>
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Connection</span>
             </button>
 
             <button
               onClick={() => setVoiceModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#80235c] hover:bg-[#6a1b4b] text-white text-xs font-bold shadow-xs transition-all active:scale-95"
+              className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-xl border border-pink-200 text-[#80235c] hover:bg-pink-50 text-xs font-bold shadow-2xs transition-all"
             >
               <Mic className="w-3.5 h-3.5 animate-pulse" />
-              <span>Record Memo</span>
+              <span>Voice Memo</span>
+            </button>
+
+            <button
+              onClick={exportToCSV}
+              className="hidden lg:flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-[#80235c] transition-colors"
+              title="Download full CSV"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>CSV</span>
+            </button>
+
+            {/* Current user pill button */}
+            <button
+              onClick={() => setAuthModalOpen(true)}
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-pink-50 hover:bg-pink-100/70 border border-pink-200 transition-all text-left"
+              title="Click to view profile, switch account, or log in"
+            >
+              <div className="w-6 h-6 rounded-full bg-[#80235c] text-white text-[10px] font-bold flex items-center justify-center">
+                {(currentUser?.name || 'Prince').charAt(0)}
+              </div>
+              <div className="hidden sm:block">
+                <span className="text-xs font-bold text-gray-900 block leading-tight truncate max-w-[100px]">
+                  {currentUser?.name?.split(' ')[0] || 'Prince'}
+                </span>
+                <span className="text-[9px] font-semibold text-purple-700 block uppercase tracking-wider">
+                  {currentUser?.role?.includes('Founder') ? 'Founder' : 'Verified'}
+                </span>
+              </div>
             </button>
           </div>
 
@@ -145,6 +184,7 @@ export default function DashboardView({ onBackToLanding }) {
               onToggleStatus={toggleFollowUpStatus}
               onOpenVoiceModal={() => setVoiceModalOpen(true)}
               onOpenCardModal={() => setCardModalOpen(true)}
+              onOpenAddConnection={() => setAddConnectionModalOpen(true)}
               onNavigateTo={(page) => setActivePage(page)}
             />
           )}
@@ -156,10 +196,11 @@ export default function DashboardView({ onBackToLanding }) {
               onToggleStatus={toggleFollowUpStatus}
               onOpenVoiceModal={() => setVoiceModalOpen(true)}
               onOpenCardModal={() => setCardModalOpen(true)}
+              onOpenAddConnection={() => setAddConnectionModalOpen(true)}
             />
           )}
 
-          {/* Page 2: Contacts Directory */}
+          {/* Page 3: Contacts Directory */}
           {activePage === 'contacts' && (
             <ContactsPage
               contacts={contacts}
@@ -173,11 +214,12 @@ export default function DashboardView({ onBackToLanding }) {
               onToggleStatus={toggleFollowUpStatus}
               onOpenVoiceModal={() => setVoiceModalOpen(true)}
               onOpenCardModal={() => setCardModalOpen(true)}
+              onOpenAddConnection={() => setAddConnectionModalOpen(true)}
               onExportCSV={exportToCSV}
             />
           )}
 
-          {/* Page 3: Spaces Hub */}
+          {/* Page 4: Spaces Hub */}
           {activePage === 'spaces' && (
             <SpacesPage
               spaces={spaces}
@@ -189,7 +231,7 @@ export default function DashboardView({ onBackToLanding }) {
             />
           )}
 
-          {/* Page 4: Reminders / Follow-up Pipeline */}
+          {/* Page 5: Reminders / Follow-up Pipeline */}
           {activePage === 'reminders' && (
             <RemindersPage
               contacts={contacts}
@@ -198,16 +240,29 @@ export default function DashboardView({ onBackToLanding }) {
             />
           )}
 
-          {/* Page 5: Digital Business Card */}
+          {/* Page 6: Digital Business Card */}
           {activePage === 'digital-card' && (
             <DigitalCardPage />
           )}
 
-          {/* Page 6: Network Intelligence Map */}
+          {/* Page 7: Network Intelligence Map */}
           {activePage === 'network-map' && (
             <NetworkMapPage
               contacts={contacts}
               onSelectContact={(c) => setSelectedContact(c)}
+            />
+          )}
+
+          {/* Page 8: Founder & Admin Portal */}
+          {activePage === 'founder' && (
+            <FounderAdminPage
+              currentUser={currentUser}
+              users={users}
+              contacts={contacts}
+              onToggleBlockUser={toggleBlockUser}
+              onDeleteUser={deleteUser}
+              onSwitchUser={switchUser}
+              onOpenAuthModal={() => setAuthModalOpen(true)}
             />
           )}
 
@@ -235,6 +290,14 @@ export default function DashboardView({ onBackToLanding }) {
         onToggleStatus={toggleFollowUpStatus}
       />
 
+      <AddConnectionModal
+        isOpen={addConnectionModalOpen}
+        onClose={() => setAddConnectionModalOpen(false)}
+        onSaveContact={addContact}
+        spaces={spaces}
+        activeSpaceId={selectedSpaceId}
+      />
+
       <VoiceRecorderModal
         isOpen={voiceModalOpen}
         onClose={() => setVoiceModalOpen(false)}
@@ -253,6 +316,17 @@ export default function DashboardView({ onBackToLanding }) {
         isOpen={spacesModalOpen}
         onClose={() => setSpacesModalOpen(false)}
         onAddSpace={addSpace}
+      />
+
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        currentUser={currentUser}
+        users={users}
+        onLoginWithOTP={loginWithOTP}
+        onUpdateProfile={updateProfile}
+        onSwitchUser={switchUser}
+        onLogout={logout}
       />
 
     </div>

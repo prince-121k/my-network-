@@ -13,7 +13,8 @@ import {
   Mail,
   MessageCircle,
   Clock,
-  Sparkles
+  Sparkles,
+  Plus
 } from 'lucide-react';
 import ContactCard from '../ContactCard';
 
@@ -29,6 +30,7 @@ export default function ContactsPage({
   onToggleStatus, 
   onOpenVoiceModal, 
   onOpenCardModal, 
+  onOpenAddConnection,
   onExportCSV 
 }) {
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'table'
@@ -58,6 +60,15 @@ export default function ContactsPage({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={onOpenAddConnection || onOpenVoiceModal}
+            className="px-4 py-2 rounded-2xl bg-[#80235c] hover:bg-[#6a1b4b] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-95"
+            title="Add connection with full info, text context & voice"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add Connection</span>
+          </button>
+
           <button
             onClick={onExportCSV}
             className="px-4 py-2 rounded-2xl bg-white border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 shadow-2xs"
