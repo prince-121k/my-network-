@@ -4,99 +4,106 @@ import {
   Download, 
   LayoutGrid, 
   List, 
-  Mic, 
   Camera, 
-  Tag, 
-  Filter, 
-  CheckCircle, 
   Phone, 
   Mail, 
   MessageCircle, 
-  Clock, 
-  Sparkles, 
   Plus, 
   Trash2, 
-  Users 
+  Users,
+  MapPin,
+  Calendar as CalendarIcon,
+  Briefcase,
+  FileText
 } from 'lucide-react';
 import ContactCard from '../ContactCard';
 
 export default function ContactsPage({ 
   contacts = [], 
   spaces = [], 
-  selectedSpaceId = 'all', 
-  setSelectedSpaceId, 
   searchQuery = '', 
   setSearchQuery, 
   filteredContacts = [], 
   onSelectContact, 
   onToggleStatus, 
-  onOpenVoiceModal, 
   onOpenCardModal, 
   onOpenAddConnection,
   onClearAllContacts,
   onLoadDemoContacts,
   onExportCSV 
 }) {
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'table'
+  const [viewMode, setViewMode] = useState('grid');
+  const [showAddMenu, setShowAddMenu] = useState(false);
 
   const displayedContacts = filteredContacts;
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-12">
+    <div className="space-y-6 animate-fadeIn pb-12 max-w-6xl mx-auto">
       
-      {/* Top Header & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Header Bar matching user screenshot media_1794976841246_56b02c66.png */}
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
-            My Connections
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+            Contacts
           </h2>
-          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-            {contacts.length === 0 ? 'No connections yet' : `${contacts.length} connections recorded with searchable context`}
+          <p className="text-xs text-gray-500 mt-0.5">
+            {contacts.length === 0 ? '0 contacts' : `${contacts.length} saved contacts with memory & context`}
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        {/* Circular Purple + Button with Dropdown (matches media_1794976841246_56b02c66.png) */}
+        <div className="relative">
           <button
-            onClick={onOpenAddConnection || onOpenVoiceModal}
-            className="px-5 py-2.5 rounded-2xl bg-[#80235c] hover:bg-[#6a1b4b] text-white text-xs font-black flex items-center gap-2 shadow-md hover:shadow-lg hover:scale-102 transition-all active:scale-95"
-            title="Add a connection with full details, voice memo & context"
+            onClick={() => setShowAddMenu(!showAddMenu)}
+            className="w-10 h-10 rounded-full bg-[#80235c] hover:bg-[#6a1b4b] text-white flex items-center justify-center shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all"
+            title="Add New Contact"
           >
-            <Plus className="w-4 h-4" />
-            <span>+ Add Connection</span>
+            <Plus className={`w-5 h-5 transition-transform duration-200 ${showAddMenu ? 'rotate-45' : ''}`} />
           </button>
 
-          {contacts.length > 0 && onExportCSV && (
-            <button
-              onClick={onExportCSV}
-              className="px-3.5 py-2.5 rounded-2xl bg-white border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 shadow-2xs"
-              title="Download CSV of contacts"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Export CSV</span>
-            </button>
-          )}
+          {/* Popover Menu: Scan Card or Add Manually */}
+          {showAddMenu && (
+            <div className="absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-gray-200/90 py-2 z-40 animate-fadeIn">
+              <button
+                onClick={() => {
+                  setShowAddMenu(false);
+                  onOpenAddConnection();
+                }}
+                className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-800 hover:bg-pink-50 hover:text-[#80235c] flex items-center gap-2.5 transition-colors"
+              >
+                <div className="w-7 h-7 rounded-lg bg-pink-100 text-[#80235c] flex items-center justify-center">
+                  <FileText className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <span className="block leading-tight font-extrabold">Add Manually</span>
+                  <span className="block text-[10px] text-gray-400 font-normal">Fill profile, location & notes</span>
+                </div>
+              </button>
 
-          {contacts.length > 0 && onClearAllContacts && (
-            <button
-              onClick={() => {
-                if (window.confirm('Kya aap saare saved contacts clear karke bilkul fresh start karna chahte hain?')) {
-                  onClearAllContacts();
-                }
-              }}
-              className="px-3 py-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold flex items-center gap-1.5 transition-colors"
-              title="Clear all saved data to start completely fresh"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>Clear All Data</span>
-            </button>
+              <button
+                onClick={() => {
+                  setShowAddMenu(false);
+                  onOpenCardModal();
+                }}
+                className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-800 hover:bg-pink-50 hover:text-[#80235c] flex items-center gap-2.5 transition-colors"
+              >
+                <div className="w-7 h-7 rounded-lg bg-purple-100 text-[#80235c] flex items-center justify-center">
+                  <Camera className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <span className="block leading-tight font-extrabold">Scan Visiting Card</span>
+                  <span className="block text-[10px] text-gray-400 font-normal">Auto-extract card details</span>
+                </div>
+              </button>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Search Bar (Only shown if contacts exist or search is active) */}
+      {/* Search & Actions Bar (If contacts exist) */}
       {contacts.length > 0 && (
         <div className="bg-white p-3.5 rounded-2xl border border-gray-200/80 shadow-2xs space-y-3">
-          <div className="flex flex-col sm:flex-row items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
             
             {/* Search Input */}
             <div className="relative flex-1 w-full">
@@ -105,37 +112,66 @@ export default function ContactsPage({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery && setSearchQuery(e.target.value)}
-                placeholder="Search by name, company, event, or notes..."
+                placeholder="Search by name, company, location, or conversation notes..."
                 className="w-full pl-10 pr-4 py-2 rounded-xl bg-gray-50 focus:bg-white border border-gray-200 focus:border-[#80235c] text-xs sm:text-sm font-medium focus:outline-none"
               />
             </div>
 
-            {/* View Mode Toggle */}
-            <div className="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200 shrink-0">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
-                  viewMode === 'grid' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-500 hover:text-gray-900'
-                }`}
-                title="Grid View"
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('table')}
-                className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
-                  viewMode === 'table' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-500 hover:text-gray-900'
-                }`}
-                title="List / Table View"
-              >
-                <List className="w-4 h-4" />
-              </button>
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              {onExportCSV && (
+                <button
+                  onClick={onExportCSV}
+                  className="px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-1.5"
+                  title="Export contacts as CSV"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>CSV</span>
+                </button>
+              )}
+
+              {onClearAllContacts && (
+                <button
+                  onClick={() => {
+                    if (window.confirm('Kya aap saare saved contacts clear karke bilkul fresh start karna chahte hain?')) {
+                      onClearAllContacts();
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold flex items-center gap-1"
+                  title="Clear all contacts to start fresh"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Clear Data</span>
+                </button>
+              )}
+
+              {/* View Mode Toggle */}
+              <div className="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200 shrink-0">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
+                    viewMode === 'grid' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                  title="Grid View"
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode('table')}
+                  className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
+                    viewMode === 'table' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                  title="List View"
+                >
+                  <List className="w-4 h-4" />
+                </button>
+              </div>
             </div>
+
           </div>
         </div>
       )}
 
-      {/* Grid or Table Display */}
+      {/* Contacts List or Empty State */}
       {displayedContacts.length > 0 ? (
         viewMode === 'grid' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -156,8 +192,8 @@ export default function ContactsPage({
                 <thead className="bg-gray-50 text-gray-400 uppercase font-bold text-[10px] tracking-wider border-b border-gray-100">
                   <tr>
                     <th className="px-6 py-4">Contact</th>
-                    <th className="px-6 py-4">Event & Context</th>
-                    <th className="px-6 py-4">Follow-up Due</th>
+                    <th className="px-6 py-4">Met At & Conversation Context</th>
+                    <th className="px-6 py-4">Date</th>
                     <th className="px-6 py-4 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -170,8 +206,12 @@ export default function ContactsPage({
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-purple-100 text-[#80235c] font-bold flex items-center justify-center text-xs shrink-0">
-                            {c.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                          <div className="w-9 h-9 rounded-xl bg-[#80235c] text-white font-bold flex items-center justify-center text-xs shrink-0 overflow-hidden">
+                            {c.photoUrl ? (
+                              <img src={c.photoUrl} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              c.name.split(' ').map(n => n[0]).join('').slice(0, 2)
+                            )}
                           </div>
                           <div>
                             <p className="font-bold text-gray-900 text-sm leading-tight">{c.name}</p>
@@ -180,12 +220,12 @@ export default function ContactsPage({
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <p className="font-semibold text-gray-800">{c.event || 'Direct'}</p>
+                        <p className="font-semibold text-gray-800 text-xs">{c.event || c.location || 'Direct'}</p>
                         <p className="text-gray-500 text-[11px] truncate max-w-xs italic">"{c.rawNotes}"</p>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="font-bold text-[#80235c]">
-                          {c.followUpDate}
+                        <span className="font-medium text-gray-600">
+                          {c.displayDate || 'Recent'}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
@@ -207,38 +247,48 @@ export default function ContactsPage({
           </div>
         )
       ) : (
-        /* Clean Inviting Empty State */
-        <div className="bg-white rounded-3xl p-8 sm:p-12 text-center border-2 border-dashed border-pink-200 max-w-lg mx-auto space-y-4 shadow-xs">
+        /* Empty State */
+        <div className="bg-white rounded-3xl p-8 sm:p-12 text-center border-2 border-dashed border-pink-200 max-w-md mx-auto space-y-4 shadow-xs">
           <div className="w-16 h-16 rounded-3xl bg-[#fdedee] text-[#80235c] flex items-center justify-center mx-auto shadow-xs">
             <Users className="w-8 h-8 text-[#80235c]" />
           </div>
           <div>
             <h3 className="text-lg sm:text-xl font-black text-gray-900">
-              No connections saved yet!
+              No contacts yet
             </h3>
-            <p className="text-xs sm:text-sm text-gray-500 mt-1 max-w-sm mx-auto leading-relaxed">
-              Met someone at a conference, hackathon, or meeting? Save their name, details, and conversation context in seconds!
+            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+              Click the <strong>+</strong> button in the top right to add a contact manually or scan a visiting card!
             </p>
           </div>
 
-          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2.5">
             <button
               onClick={onOpenAddConnection}
-              className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-[#80235c] hover:bg-[#6a1b4b] text-white text-xs font-black shadow-md hover:shadow-lg hover:scale-102 transition-all flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-[#80235c] hover:bg-[#6a1b4b] text-white text-xs font-black shadow-md transition-all flex items-center justify-center gap-2"
             >
               <Plus className="w-4 h-4" />
-              <span>+ Add Your First Connection</span>
+              <span>Add Manually</span>
             </button>
 
-            {onLoadDemoContacts && (
+            <button
+              onClick={onOpenCardModal}
+              className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-white hover:bg-pink-50 text-[#80235c] border border-pink-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+            >
+              <Camera className="w-4 h-4" />
+              <span>Scan Card</span>
+            </button>
+          </div>
+
+          {onLoadDemoContacts && (
+            <div className="pt-2">
               <button
                 onClick={onLoadDemoContacts}
-                className="w-full sm:w-auto px-4 py-3 rounded-2xl bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-200 text-xs font-bold transition-all"
+                className="text-[11px] font-bold text-gray-400 hover:text-gray-700 underline"
               >
-                Load Sample Data (Preview)
+                Load sample demo data to preview
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
 

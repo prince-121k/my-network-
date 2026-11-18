@@ -3,28 +3,26 @@ import {
   X, 
   User, 
   Building2, 
-  MapPin, 
+  Calendar as CalendarIcon, 
   Phone, 
   Mail, 
   Linkedin, 
+  Twitter, 
   Instagram, 
+  Facebook, 
+  Globe, 
+  MapPin, 
   Mic, 
   MicOff, 
-  Volume2, 
-  VolumeX, 
   Play, 
   Pause, 
-  Calendar, 
-  Clock, 
-  Tag, 
-  Sparkles, 
-  MessageCircle, 
-  CheckCircle2, 
-  FileText,
-  Sliders,
-  Check,
-  Save,
-  RotateCcw
+  ChevronUp, 
+  ChevronDown, 
+  Camera, 
+  Crosshair, 
+  Check, 
+  Sparkles,
+  Save
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -37,33 +35,62 @@ export default function AddConnectionModal({
 }) {
   if (!isOpen) return null;
 
-  // Connection Profile Form
-  const [formData, setFormData] = useState({
-    name: '',
-    role: '',
-    company: '',
-    event: '',
-    phone: '',
-    email: '',
-    linkedin: '',
-    spaceId: activeSpaceId || 'all'
+  // Accordion open/close states (all open by default for smooth scrolling)
+  const [openSections, setOpenSections] = useState({
+    profile: true,
+    company: true,
+    context: true
   });
 
-  // Context Input Mode: 'text' | 'voice'
-  const [contextMode, setContextMode] = useState('text'); // 'text' | 'voice'
-  const [textNotes, setTextNotes] = useState('');
-  const [actionItem, setActionItem] = useState('');
-  const [followUpDate, setFollowUpDate] = useState('Monday, 10:00 AM');
-  const [whatsappMessage, setWhatsappMessage] = useState('');
+  const toggleSection = (sec) => {
+    setOpenSections(prev => ({ ...prev, [sec]: !prev[sec] }));
+  };
 
-  // High Sensitivity Audio Recording State
+  // Form Fields
+  const [salutation, setSalutation] = useState('None');
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [additionalEmails, setAdditionalEmails] = useState([]);
+  const [showAdditionalEmailInput, setShowAdditionalEmailInput] = useState(false);
+  const [countryCode, setCountryCode] = useState('+91');
+  const [phone, setPhone] = useState('');
+
+  // Social Links
+  const [linkedin, setLinkedin] = useState('');
+  const [twitter, setTwitter] = useState('');
+  const [instagram, setInstagram] = useState('');
+  const [facebook, setFacebook] = useState('');
+
+  // Company Details
+  const [company, setCompany] = useState('');
+  const [designation, setDesignation] = useState('');
+  const [companyWebsite, setCompanyWebsite] = useState('');
+  const [companyAddress, setCompanyAddress] = useState('');
+
+  // Context & Location Details
+  const [metAt, setMetAt] = useState('Shaheed Major Rajeev Laul Marg, Janakpuri, Delhi, 110058, India');
+  const [metOn, setMetOn] = useState(() => {
+    const today = new Date();
+    const dd = String(today.getDate()).padStart(2, '0');
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const yyyy = today.getFullYear();
+    return `${yyyy}-${mm}-${dd}`;
+  });
+  const [updatesText, setUpdatesText] = useState('');
+  const [isLocating, setIsLocating] = useState(false);
+
+  // Selfie / Photo Capture State
+  const [selfieUrl, setSelfieUrl] = useState(null);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const videoRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  // Enhanced Voice Recording State
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [audioUrl, setAudioUrl] = useState(null);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
-  const [sensitivityBoost, setSensitivityBoost] = useState(true); // 2.5x gain boost for whispers
-  const [audioVisualBars, setAudioVisualBars] = useState([12, 18, 10, 24, 16, 20, 14, 28]);
-
+  
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const recognitionRef = useRef(null);
@@ -72,127 +99,158 @@ export default function AddConnectionModal({
   const audioContextRef = useRef(null);
   const streamRef = useRef(null);
 
-  // Auto-generate WhatsApp draft when name or action item changes
-  useEffect(() => {
-    if (formData.name) {
-      const firstName = formData.name.split(' ')[0];
-      const eventPart = formData.event ? ` at ${formData.event}` : '';
-      const topicPart = actionItem ? ` Following up regarding ${actionItem.toLowerCase()} as discussed.` : ' Great connecting with you!';
-      setWhatsappMessage(`Hi ${firstName},${eventPart}!${topicPart}`);
-    }
-  }, [formData.name, formData.event, actionItem]);
+  // Dynamic Avatar Initial
+  const avatarInitial = fullName.trim() ? fullName.trim().charAt(0).toUpperCase() : 'C';
 
-  // Waveform animation during voice recording
-  useEffect(() => {
-    if (isRecording) {
-      timerIntervalRef.current = setInterval(() => {
-        setRecordingSeconds(s => s + 1);
-        setAudioVisualBars([
-          Math.floor(Math.random() * 26) + 10,
-          Math.floor(Math.random() * 34) + 12,
-          Math.floor(Math.random() * 30) + 8,
-          Math.floor(Math.random() * 38) + 14,
-          Math.floor(Math.random() * 28) + 10,
-          Math.floor(Math.random() * 36) + 12,
-          Math.floor(Math.random() * 24) + 8,
-          Math.floor(Math.random() * 32) + 10,
-        ]);
-      }, 500);
-    } else {
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+  // Geolocation Auto-Detection
+  const handleDetectLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser.');
+      return;
     }
-    return () => {
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    };
-  }, [isRecording]);
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          // Free OpenStreetMap reverse geocode
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+          const data = await res.json();
+          if (data && data.display_name) {
+            setMetAt(data.display_name);
+          } else {
+            setMetAt(`Lat: ${latitude.toFixed(4)}, Lon: ${longitude.toFixed(4)} (Current Location)`);
+          }
+        } catch (e) {
+          setMetAt(`Near Delhi NCR (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`);
+        } finally {
+          setIsLocating(false);
+        }
+      },
+      (error) => {
+        setIsLocating(false);
+        alert('Could not retrieve location. Please check browser permissions.');
+      },
+      { timeout: 8000 }
+    );
+  };
 
-  // Start High Sensitivity Voice Note
-  const startRecording = async () => {
+  // Camera Selfie Capture
+  const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        } 
+      setIsCameraActive(true);
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      alert('Camera access denied or unavailable. You can click to upload a photo!');
+      setIsCameraActive(false);
+    }
+  };
+
+  const takeSelfie = () => {
+    if (!videoRef.current) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth || 320;
+    canvas.height = videoRef.current.videoHeight || 240;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg');
+    setSelfieUrl(dataUrl);
+
+    // Stop camera tracks
+    if (videoRef.current.srcObject) {
+      videoRef.current.srcObject.getTracks().forEach(t => t.stop());
+    }
+    setIsCameraActive(false);
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setSelfieUrl(url);
+    }
+  };
+
+  // Voice Note Recording with 2.5x High-Gain Sensitivity & Live Speech-to-Text
+  const startVoiceRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
       });
       streamRef.current = stream;
 
-      // 2.5x High-Gain Sensitivity Audio processing
-      let recordingStream = stream;
-      if (sensitivityBoost) {
-        try {
-          const AudioCtx = window.AudioContext || window.webkitAudioContext;
-          if (AudioCtx) {
-            const ctx = new AudioCtx();
-            audioContextRef.current = ctx;
-            const source = ctx.createMediaStreamSource(stream);
-            const gainNode = ctx.createGain();
-            gainNode.gain.value = 2.5; // 2.5x boost for quiet whispers
-            const destination = ctx.createMediaStreamDestination();
-            source.connect(gainNode);
-            gainNode.connect(destination);
-            recordingStream = destination.stream;
-          }
-        } catch (err) {
-          console.warn('Web Audio gain booster fallback:', err);
+      // 2.5x gain boost for whisper / soft speech
+      let recordStream = stream;
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          const ctx = new AudioCtx();
+          audioContextRef.current = ctx;
+          const source = ctx.createMediaStreamSource(stream);
+          const gainNode = ctx.createGain();
+          gainNode.gain.value = 2.5;
+          const dest = ctx.createMediaStreamDestination();
+          source.connect(gainNode);
+          gainNode.connect(dest);
+          recordStream = dest.stream;
         }
-      }
+      } catch (e) {}
 
       const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
-      const mediaRecorder = new MediaRecorder(recordingStream, { mimeType });
-      mediaRecorderRef.current = mediaRecorder;
+      const recorder = new MediaRecorder(recordStream, { mimeType });
+      mediaRecorderRef.current = recorder;
       audioChunksRef.current = [];
 
-      mediaRecorder.ondataavailable = (e) => {
+      recorder.ondataavailable = (e) => {
         if (e.data.size > 0) audioChunksRef.current.push(e.data);
       };
 
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
-        const url = URL.createObjectURL(audioBlob);
-        setAudioUrl(url);
+      recorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: mimeType });
+        setAudioUrl(URL.createObjectURL(blob));
       };
 
-      mediaRecorder.start(250);
+      recorder.start(250);
       setIsRecording(true);
       setRecordingSeconds(0);
 
-      // Continuous Live Speech-to-Text
+      timerIntervalRef.current = setInterval(() => {
+        setRecordingSeconds(s => s + 1);
+      }, 1000);
+
+      // Speech to text appends directly to updatesText
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
-        recognitionRef.current = recognition;
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = 'en-IN';
+        const recog = new SpeechRecognition();
+        recognitionRef.current = recog;
+        recog.continuous = true;
+        recog.interimResults = true;
+        recog.lang = 'en-IN';
 
-        recognition.onresult = (event) => {
+        recog.onresult = (evt) => {
           let transcript = '';
-          for (let i = 0; i < event.results.length; i++) {
-            transcript += event.results[i][0].transcript + ' ';
+          for (let i = 0; i < evt.results.length; i++) {
+            transcript += evt.results[i][0].transcript + ' ';
           }
           if (transcript.trim()) {
-            setTextNotes(prev => {
-              const cleaned = transcript.trim();
-              return cleaned;
+            setUpdatesText(prev => {
+              const base = prev.trim() ? prev.trim() + ' ' : '';
+              return (transcript.trim()).slice(0, 500);
             });
           }
         };
 
-        recognition.onerror = (err) => {
-          console.warn('Speech recognition error:', err);
-        };
-
-        try { recognition.start(); } catch (e) {}
+        try { recog.start(); } catch (e) {}
       }
     } catch (err) {
-      alert('Microphone permission required for voice notes. You can also type notes manually below!');
+      alert('Microphone access is required for voice notes. You can type directly in the box!');
     }
   };
 
-  // Stop Recording
-  const stopRecording = () => {
+  const stopVoiceRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       try { mediaRecorderRef.current.stop(); } catch (e) {}
     }
@@ -205,10 +263,10 @@ export default function AddConnectionModal({
     if (audioContextRef.current) {
       try { audioContextRef.current.close(); } catch (e) {}
     }
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     setIsRecording(false);
   };
 
-  // Play audio playback
   const togglePlayAudio = () => {
     if (!audioElementRef.current) return;
     if (isPlayingAudio) {
@@ -220,350 +278,635 @@ export default function AddConnectionModal({
     }
   };
 
-  // Submit & Save Connection
+  // Submit & Save Contact
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.name.trim()) {
-      alert('Please enter connection name.');
+    if (!fullName.trim()) {
+      alert('Please enter Full Name.');
       return;
     }
 
-    const durationStr = `0:${recordingSeconds < 10 ? '0' + recordingSeconds : recordingSeconds}`;
+    const fullContactName = salutation !== 'None' ? `${salutation} ${fullName.trim()}` : fullName.trim();
+    const finalPhone = phone.trim() ? `${countryCode} ${phone.trim()}` : '';
 
     const newContact = {
       id: 'conn_' + Date.now(),
-      name: formData.name.trim(),
-      role: formData.role.trim() || 'Professional',
-      company: formData.company.trim() || 'Direct Network',
-      event: formData.event.trim() || 'In-person Meeting',
-      location: formData.event.trim() || 'Direct Meeting',
-      phone: formData.phone.trim(),
-      email: formData.email.trim(),
-      linkedin: formData.linkedin.trim(),
-      spaceId: formData.spaceId || 'all',
-      tags: [formData.company || 'Networking', formData.event || 'Direct'].filter(Boolean),
-      rawNotes: textNotes.trim() || 'Met in person.',
-      topicsDiscussed: textNotes.trim() ? [textNotes.trim()] : ['Initial connection established.'],
-      actionItem: actionItem.trim() || 'Send follow-up details on WhatsApp.',
-      followUpDate: followUpDate || 'Monday, 10:00 AM',
-      whatsappMessage: whatsappMessage.trim() || `Hi ${formData.name.split(' ')[0]}, great connecting with you!`,
+      name: fullContactName,
+      salutation,
+      role: designation.trim() || 'Professional',
+      company: company.trim() || 'Independent',
+      website: companyWebsite.trim(),
+      companyAddress: companyAddress.trim(),
+      event: metAt.trim() || 'Direct Meeting',
+      location: metAt.trim() || 'In-person Meeting',
+      phone: finalPhone,
+      email: email.trim(),
+      additionalEmails,
+      linkedin: linkedin.trim(),
+      twitter: twitter.trim(),
+      instagram: instagram.trim(),
+      facebook: facebook.trim(),
+      photoUrl: selfieUrl,
+      spaceId: activeSpaceId || 'all',
+      tags: [company || 'Networking', designation || 'Connection'].filter(Boolean),
+      rawNotes: updatesText.trim() || 'Conversation notes captured in person.',
+      topicsDiscussed: updatesText.trim() ? [updatesText.trim()] : ['Initial connection established.'],
+      actionItem: 'Follow up on WhatsApp or email',
+      followUpDate: 'In 3 days',
+      whatsappMessage: `Hi ${fullName.split(' ')[0]}, great meeting you at ${metAt ? metAt.split(',')[0] : 'the event'}!`,
       status: 'pending',
       audioUrl: audioUrl,
-      audioDuration: recordingSeconds > 0 ? durationStr : '0:30',
-      displayDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      audioDuration: recordingSeconds > 0 ? `0:${recordingSeconds < 10 ? '0' + recordingSeconds : recordingSeconds}` : '0:30',
+      displayDate: metOn ? new Date(metOn).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Today',
       displayTime: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      visitDate: new Date().toISOString().split('T')[0]
+      visitDate: metOn || new Date().toISOString().split('T')[0]
     };
 
     onSaveContact(newContact);
-    try { confetti({ particleCount: 70, spread: 75, origin: { y: 0.6 } }); } catch (e) {}
+    try { confetti({ particleCount: 75, spread: 80, origin: { y: 0.6 } }); } catch (e) {}
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn overflow-y-auto">
-      <div className="bg-white w-full max-w-xl rounded-3xl p-5 sm:p-7 shadow-2xl border border-pink-100 relative my-6 space-y-5 max-h-[92vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn overflow-y-auto">
+      <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border border-gray-200 relative my-4 sm:my-8 max-h-[92vh] flex flex-col">
         
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 text-gray-500 hover:text-gray-900 flex items-center justify-center hover:bg-gray-200 transition-colors"
-          title="Close modal"
-        >
-          <X className="w-4 h-4" />
-        </button>
-
-        {/* Modal Header */}
-        <div className="pr-8">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#fdedee] text-[#80235c] text-xs font-bold mb-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-[#80235c]" />
-            <span>New Relationship</span>
-          </div>
-          <h3 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
-            Add Connection & Context
+        {/* Top Header Bar (matches purple berry background in user screenshot media_1794976841384_26c20372.png) */}
+        <div className="bg-[#80235c] text-white px-5 sm:px-6 py-4 flex items-center justify-between shrink-0">
+          <h3 className="text-lg sm:text-xl font-bold tracking-tight">
+            New Contact
           </h3>
-          <p className="text-xs text-gray-500">
-            Save contact details along with conversation context (type manually or record enhanced voice).
-          </p>
+          <button
+            onClick={onClose}
+            className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
+            title="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Scrollable Form Body */}
+        <form onSubmit={handleSubmit} className="overflow-y-auto p-4 sm:p-6 space-y-4 flex-1">
           
-          {/* SECTION 1: Person Details */}
-          <div className="bg-gray-50/80 p-4 rounded-2xl border border-gray-200/70 space-y-3">
-            <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">
-              1. Contact Information
-            </span>
-
-            <div className="space-y-2.5">
-              <div>
-                <label className="text-xs font-bold text-gray-700 block mb-1">
-                  Full Name <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g. Rohan Sharma"
-                    className="w-full pl-9 pr-3 py-2 rounded-xl bg-white border border-gray-200 focus:border-[#80235c] text-xs font-bold text-gray-900 focus:outline-none"
-                  />
+          {/* =========================================
+              SECTION 1: Profile Details (Collapsible)
+             ========================================= */}
+          <div className="rounded-xl border border-gray-200 overflow-hidden shadow-2xs">
+            <button
+              type="button"
+              onClick={() => toggleSection('profile')}
+              className="w-full bg-[#faf5f8] px-4 py-3 flex items-center justify-between text-left hover:bg-pink-50/60 transition-colors"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-[#80235c] text-white flex items-center justify-center">
+                  <User className="w-4 h-4" />
                 </div>
+                <span className="font-bold text-gray-900 text-sm">
+                  Profile Details
+                </span>
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div>
-                  <label className="text-xs font-bold text-gray-700 block mb-1">Company / College</label>
-                  <div className="relative">
-                    <Building2 className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                    <input
-                      type="text"
-                      value={formData.company}
-                      onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                      placeholder="e.g. Microsoft / IIT Delhi"
-                      className="w-full pl-9 pr-3 py-2 rounded-xl bg-white border border-gray-200 focus:border-[#80235c] text-xs font-medium text-gray-800 focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-gray-700 block mb-1">Role / Designation</label>
-                  <input
-                    type="text"
-                    value={formData.role}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                    placeholder="e.g. Founder / Developer"
-                    className="w-full px-3 py-2 rounded-xl bg-white border border-gray-200 focus:border-[#80235c] text-xs font-medium text-gray-800 focus:outline-none"
-                  />
-                </div>
+              <div className="w-6 h-6 rounded-full bg-pink-100/70 text-[#80235c] flex items-center justify-center">
+                {openSections.profile ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </div>
+            </button>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {openSections.profile && (
+              <div className="p-4 sm:p-5 space-y-4 bg-white">
+                
+                {/* Profile Photo & Captured Selfies */}
                 <div>
-                  <label className="text-xs font-bold text-gray-700 block mb-1">Meeting Place / Event</label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                    <input
-                      type="text"
-                      value={formData.event}
-                      onChange={(e) => setFormData({ ...formData, event: e.target.value })}
-                      placeholder="e.g. Bengaluru Summit / Hackathon"
-                      className="w-full pl-9 pr-3 py-2 rounded-xl bg-white border border-gray-200 focus:border-[#80235c] text-xs font-medium text-gray-800 focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-gray-700 block mb-1">Phone / WhatsApp (Optional)</label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                    <input
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="+91 98765 43210"
-                      className="w-full pl-9 pr-3 py-2 rounded-xl bg-white border border-gray-200 focus:border-[#80235c] text-xs font-medium text-gray-800 focus:outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* SECTION 2: Conversation Context (TWO CLEAR OPTIONS: TYPE or VOICE) */}
-          <div className="bg-pink-50/40 p-4 rounded-2xl border border-pink-200/80 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black uppercase tracking-wider text-[#80235c] block">
-                2. Conversation Context (Kya Baat Hui Thi)
-              </span>
-
-              {/* TWO CLEAR TOGGLE BUTTONS */}
-              <div className="flex bg-white p-1 rounded-xl border border-pink-200 shadow-2xs">
-                <button
-                  type="button"
-                  onClick={() => setContextMode('text')}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                    contextMode === 'text'
-                      ? 'bg-[#80235c] text-white shadow-2xs'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  <span>Type Manually</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setContextMode('voice')}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                    contextMode === 'voice'
-                      ? 'bg-[#80235c] text-white shadow-2xs'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  <Mic className="w-3.5 h-3.5" />
-                  <span>Voice Note (High-Gain)</span>
-                </button>
-              </div>
-            </div>
-
-            {/* OPTION 1: Type Context Manually */}
-            {contextMode === 'text' && (
-              <div className="space-y-2.5 animate-fadeIn">
-                <div>
-                  <label className="text-xs font-bold text-gray-700 block mb-1">
-                    What did you talk about? (Discussion Points)
+                  <label className="text-xs font-semibold text-gray-600 block mb-2">
+                    Profile Photo
                   </label>
-                  <textarea
-                    rows={3}
-                    value={textNotes}
-                    onChange={(e) => setTextNotes(e.target.value)}
-                    placeholder="e.g. Discussed AI partnership, latency benchmarks on Azure/Google Cloud, agreed to collaborate on prototype..."
-                    className="w-full p-3 rounded-xl bg-white border border-gray-200 focus:border-[#80235c] text-xs font-medium text-gray-800 focus:outline-none resize-none leading-relaxed"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* OPTION 2: High Sensitivity Voice Note Mode */}
-            {contextMode === 'voice' && (
-              <div className="space-y-3 animate-fadeIn">
-                <div className="bg-white p-4 rounded-xl border border-pink-200/80 text-center space-y-3">
-                  
-                  {/* Sensitivity pill indicator */}
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-black">
-                    <Sliders className="w-3 h-3 text-emerald-600" />
-                    <span>Enhanced 2.5x Gain Boost (Dhire se bolne par bhi crystal clear)</span>
+                  <div className="flex items-center gap-6">
+                    {/* Circle Avatar Initial */}
+                    <div className="w-16 h-16 rounded-full bg-[#80235c] text-white font-bold text-2xl flex items-center justify-center shadow-xs overflow-hidden">
+                      {selfieUrl ? (
+                        <img src={selfieUrl} alt="Contact" className="w-full h-full object-cover" />
+                      ) : (
+                        avatarInitial
+                      )}
+                    </div>
                   </div>
+                </div>
 
-                  {/* Big Record Microphone Button */}
-                  <div className="flex flex-col items-center justify-center gap-2 pt-1">
-                    {!isRecording ? (
+                {/* Captured Selfies Box with Dashed Border */}
+                <div className="p-3 rounded-2xl border border-gray-200/90 space-y-2 bg-gray-50/40">
+                  <span className="text-xs font-bold text-gray-700 block">
+                    Captured Selfies
+                  </span>
+
+                  {isCameraActive ? (
+                    <div className="space-y-2">
+                      <video ref={videoRef} autoPlay playsInline className="w-48 h-36 bg-black rounded-xl object-cover mx-auto" />
+                      <div className="flex justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={takeSelfie}
+                          className="px-3 py-1.5 rounded-lg bg-[#80235c] text-white text-xs font-bold"
+                        >
+                          Capture Snapshot
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (videoRef.current?.srcObject) {
+                              videoRef.current.srcObject.getTracks().forEach(t => t.stop());
+                            }
+                            setIsCameraActive(false);
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-gray-200 text-gray-700 text-xs font-bold"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3">
                       <button
                         type="button"
-                        onClick={startRecording}
-                        className="w-16 h-16 rounded-full bg-[#80235c] hover:bg-[#6a1b4b] text-white flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all"
-                        title="Click to start speaking"
+                        onClick={startCamera}
+                        className="w-16 h-16 rounded-2xl border-2 border-dashed border-pink-300 hover:border-[#80235c] bg-pink-50/40 flex flex-col items-center justify-center text-[#80235c] hover:bg-pink-50 transition-colors shadow-2xs"
+                        title="Click to take a live selfie"
                       >
-                        <Mic className="w-7 h-7" />
+                        <span className="text-xl font-bold leading-none">+</span>
+                      </button>
+
+                      <div className="text-xs text-gray-500">
+                        <p className="font-semibold text-gray-700">Take a live selfie or upload</p>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="text-[#80235c] font-bold hover:underline"
+                        >
+                          Browse from files
+                        </button>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFileUpload}
+                          className="hidden"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Salutation + Full Name */}
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-700 block mb-1">
+                      Salutation
+                    </label>
+                    <select
+                      value={salutation}
+                      onChange={(e) => setSalutation(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs font-medium text-gray-800 focus:outline-none focus:border-[#80235c]"
+                    >
+                      <option value="None">None</option>
+                      <option value="Mr.">Mr.</option>
+                      <option value="Ms.">Ms.</option>
+                      <option value="Mrs.">Mrs.</option>
+                      <option value="Dr.">Dr.</option>
+                      <option value="Prof.">Prof.</option>
+                    </select>
+                  </div>
+
+                  <div className="sm:col-span-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-semibold text-gray-700">
+                        Full Name <span className="text-rose-500">*</span>
+                      </label>
+                      <span className="text-[10px] text-gray-400 font-mono">{fullName.length}/80</span>
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      maxLength={80}
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="e.g. Jonathan Ive"
+                      className="w-full px-3.5 py-2 rounded-xl border border-gray-200 bg-white text-xs font-medium text-gray-900 focus:outline-none focus:border-[#80235c]"
+                    />
+                  </div>
+                </div>
+
+                {/* Email */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-gray-700">
+                      Email
+                    </label>
+                    <span className="text-[10px] text-gray-400 font-mono">{email.length}/100</span>
+                  </div>
+                  <input
+                    type="email"
+                    maxLength={100}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="jonathan@apple.com"
+                    className="w-full px-3.5 py-2 rounded-xl border border-gray-200 bg-white text-xs font-medium text-gray-900 focus:outline-none focus:border-[#80235c]"
+                  />
+                  
+                  {/* Additional Emails */}
+                  <div className="mt-1.5">
+                    {!showAdditionalEmailInput ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowAdditionalEmailInput(true)}
+                        className="text-[11px] font-bold text-[#80235c] hover:underline"
+                      >
+                        + Additional Email(s)
                       </button>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={stopRecording}
-                        className="w-16 h-16 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-lg animate-pulse"
-                        title="Click to stop speaking"
-                      >
-                        <MicOff className="w-7 h-7" />
-                      </button>
-                    )}
-
-                    <span className="text-xs font-extrabold text-gray-800">
-                      {isRecording ? `Recording... (${recordingSeconds}s) - Speak Now` : 'Tap Mic & Speak 15-sec Memo'}
-                    </span>
-                  </div>
-
-                  {/* Animated Waveform Visualizer */}
-                  {isRecording && (
-                    <div className="flex items-center justify-center gap-1 h-8">
-                      {audioVisualBars.map((h, i) => (
-                        <span
-                          key={i}
-                          className="w-1.5 bg-[#80235c] rounded-full transition-all duration-200"
-                          style={{ height: `${h}px` }}
+                      <div className="space-y-1.5 pt-1">
+                        <input
+                          type="email"
+                          placeholder="secondary@company.com"
+                          onBlur={(e) => {
+                            if (e.target.value.trim()) {
+                              setAdditionalEmails([...additionalEmails, e.target.value.trim()]);
+                              e.target.value = '';
+                            }
+                          }}
+                          className="w-full px-3.5 py-1.5 rounded-xl border border-gray-200 text-xs font-medium text-gray-900 focus:outline-none"
                         />
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Playback if audio is recorded */}
-                  {audioUrl && !isRecording && (
-                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-gray-50 border border-gray-200">
-                      <audio ref={audioElementRef} src={audioUrl} onEnded={() => setIsPlayingAudio(false)} className="hidden" />
-                      <button
-                        type="button"
-                        onClick={togglePlayAudio}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#80235c] text-white text-xs font-bold"
-                      >
-                        {isPlayingAudio ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-                        <span>{isPlayingAudio ? 'Playing Voice Note' : 'Listen Back Voice Memo'}</span>
-                      </button>
-                      <span className="text-xs font-mono font-bold text-gray-500">Audio Saved ✓</span>
-                    </div>
-                  )}
+                        {additionalEmails.map((em, idx) => (
+                          <span key={idx} className="inline-block bg-gray-100 text-gray-700 text-[10px] font-mono px-2 py-0.5 rounded-md mr-1">
+                            {em}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {/* Live Speech-to-Text Transcribed Result */}
+                {/* Phone with Country Code Selector */}
                 <div>
-                  <label className="text-xs font-bold text-gray-700 block mb-1">
-                    Live Transcribed Text (Edit if needed):
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-gray-700">
+                      Phone
+                    </label>
+                    <span className="text-[10px] text-gray-400 font-mono">{phone.length}/20</span>
+                  </div>
+                  <div className="flex rounded-xl border border-gray-200 overflow-hidden focus-within:border-[#80235c]">
+                    <div className="flex items-center gap-1 px-3 bg-gray-50 border-r border-gray-200 text-xs font-medium text-gray-700 shrink-0">
+                      <span>🇮🇳</span>
+                      <select
+                        value={countryCode}
+                        onChange={(e) => setCountryCode(e.target.value)}
+                        className="bg-transparent text-xs font-semibold text-gray-800 focus:outline-none cursor-pointer"
+                      >
+                        <option value="+91">IN (+91)</option>
+                        <option value="+1">US (+1)</option>
+                        <option value="+44">UK (+44)</option>
+                        <option value="+971">UAE (+971)</option>
+                        <option value="+65">SG (+65)</option>
+                      </select>
+                    </div>
+                    <input
+                      type="tel"
+                      maxLength={20}
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="e.g. 9876543210"
+                      className="w-full px-3.5 py-2 text-xs font-medium text-gray-900 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Social Media Links (matches screenshot media_1794976841334_411df2c6.png) */}
+                <div className="space-y-2.5 pt-1">
+                  {/* LinkedIn */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] font-semibold text-gray-600">LinkedIn</label>
+                      <span className="text-[9px] text-gray-400 font-mono">{linkedin.length}/150</span>
+                    </div>
+                    <div className="relative">
+                      <div className="absolute left-3 top-2 w-4 h-4 text-blue-600 flex items-center justify-center font-bold text-xs">
+                        in
+                      </div>
+                      <input
+                        type="text"
+                        maxLength={150}
+                        value={linkedin}
+                        onChange={(e) => setLinkedin(e.target.value)}
+                        placeholder="linkedin.com/in/username"
+                        className="w-full pl-9 pr-3.5 py-1.5 rounded-xl border border-gray-200 text-xs font-medium text-gray-900 focus:outline-none focus:border-[#80235c]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Twitter / X */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] font-semibold text-gray-600">Twitter / X</label>
+                      <span className="text-[9px] text-gray-400 font-mono">{twitter.length}/150</span>
+                    </div>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1.5 font-bold text-gray-800 text-xs">𝕏</span>
+                      <input
+                        type="text"
+                        maxLength={150}
+                        value={twitter}
+                        onChange={(e) => setTwitter(e.target.value)}
+                        placeholder="x.com/username"
+                        className="w-full pl-9 pr-3.5 py-1.5 rounded-xl border border-gray-200 text-xs font-medium text-gray-900 focus:outline-none focus:border-[#80235c]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Instagram & Facebook */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[11px] font-semibold text-gray-600">Instagram</label>
+                        <span className="text-[9px] text-gray-400 font-mono">{instagram.length}/150</span>
+                      </div>
+                      <div className="relative">
+                        <Instagram className="absolute left-3 top-2 w-3.5 h-3.5 text-pink-600" />
+                        <input
+                          type="text"
+                          maxLength={150}
+                          value={instagram}
+                          onChange={(e) => setInstagram(e.target.value)}
+                          placeholder="instagram.com/username"
+                          className="w-full pl-9 pr-3.5 py-1.5 rounded-xl border border-gray-200 text-xs font-medium text-gray-900 focus:outline-none focus:border-[#80235c]"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[11px] font-semibold text-gray-600">Facebook</label>
+                        <span className="text-[9px] text-gray-400 font-mono">{facebook.length}/150</span>
+                      </div>
+                      <div className="relative">
+                        <Facebook className="absolute left-3 top-2 w-3.5 h-3.5 text-blue-600" />
+                        <input
+                          type="text"
+                          maxLength={150}
+                          value={facebook}
+                          onChange={(e) => setFacebook(e.target.value)}
+                          placeholder="facebook.com/username"
+                          className="w-full pl-9 pr-3.5 py-1.5 rounded-xl border border-gray-200 text-xs font-medium text-gray-900 focus:outline-none focus:border-[#80235c]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            )}
+          </div>
+
+          {/* =========================================
+              SECTION 2: Company Details (Collapsible)
+             ========================================= */}
+          <div className="rounded-xl border border-gray-200 overflow-hidden shadow-2xs">
+            <button
+              type="button"
+              onClick={() => toggleSection('company')}
+              className="w-full bg-[#faf5f8] px-4 py-3 flex items-center justify-between text-left hover:bg-pink-50/60 transition-colors"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-[#80235c] text-white flex items-center justify-center">
+                  <Building2 className="w-4 h-4" />
+                </div>
+                <span className="font-bold text-gray-900 text-sm">
+                  Company Details
+                </span>
+              </div>
+              <div className="w-6 h-6 rounded-full bg-pink-100/70 text-[#80235c] flex items-center justify-center">
+                {openSections.company ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </div>
+            </button>
+
+            {openSections.company && (
+              <div className="p-4 sm:p-5 space-y-3.5 bg-white">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-semibold text-gray-700">Company</label>
+                      <span className="text-[10px] text-gray-400 font-mono">{company.length}/100</span>
+                    </div>
+                    <input
+                      type="text"
+                      maxLength={100}
+                      value={company}
+                      onChange={(e) => setCompany(e.target.value)}
+                      placeholder="Company Name"
+                      className="w-full px-3.5 py-2 rounded-xl border border-gray-200 text-xs font-medium text-gray-900 focus:outline-none focus:border-[#80235c]"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-semibold text-gray-700">Designation</label>
+                      <span className="text-[10px] text-gray-400 font-mono">{designation.length}/80</span>
+                    </div>
+                    <input
+                      type="text"
+                      maxLength={80}
+                      value={designation}
+                      onChange={(e) => setDesignation(e.target.value)}
+                      placeholder="Job Title"
+                      className="w-full px-3.5 py-2 rounded-xl border border-gray-200 text-xs font-medium text-gray-900 focus:outline-none focus:border-[#80235c]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-gray-700">Company Website</label>
+                    <span className="text-[10px] text-gray-400 font-mono">{companyWebsite.length}/150</span>
+                  </div>
+                  <input
+                    type="url"
+                    maxLength={150}
+                    value={companyWebsite}
+                    onChange={(e) => setCompanyWebsite(e.target.value)}
+                    placeholder="https://www.company.com"
+                    className="w-full px-3.5 py-2 rounded-xl border border-gray-200 text-xs font-medium text-gray-900 focus:outline-none focus:border-[#80235c]"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-gray-700">Company Address</label>
+                    <span className="text-[10px] text-gray-400 font-mono">{companyAddress.length}/250</span>
+                  </div>
                   <textarea
                     rows={2}
-                    value={textNotes}
-                    onChange={(e) => setTextNotes(e.target.value)}
-                    placeholder="Speaking will automatically transcribe words into text here..."
-                    className="w-full p-2.5 rounded-xl bg-white border border-gray-200 focus:border-[#80235c] text-xs font-medium text-gray-800 focus:outline-none resize-none leading-relaxed"
+                    maxLength={250}
+                    value={companyAddress}
+                    onChange={(e) => setCompanyAddress(e.target.value)}
+                    placeholder="Office address, city, state, pin..."
+                    className="w-full px-3.5 py-2 rounded-xl border border-gray-200 text-xs font-medium text-gray-900 focus:outline-none focus:border-[#80235c] resize-none"
                   />
                 </div>
               </div>
             )}
-
-            {/* Next Step / Action Item */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-              <div>
-                <label className="text-xs font-bold text-gray-700 block mb-1">Next Step / Action Item</label>
-                <input
-                  type="text"
-                  value={actionItem}
-                  onChange={(e) => setActionItem(e.target.value)}
-                  placeholder="e.g. Send pitch deck on WhatsApp"
-                  className="w-full px-3 py-2 rounded-xl bg-white border border-gray-200 focus:border-[#80235c] text-xs font-medium text-gray-800 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-gray-700 block mb-1">Follow-up Due</label>
-                <input
-                  type="text"
-                  value={followUpDate}
-                  onChange={(e) => setFollowUpDate(e.target.value)}
-                  placeholder="e.g. Monday, 10:00 AM"
-                  className="w-full px-3 py-2 rounded-xl bg-white border border-gray-200 focus:border-[#80235c] text-xs font-medium text-gray-800 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            {/* WhatsApp Follow-up message preview */}
-            <div className="bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-200/80 space-y-1">
-              <span className="text-[10px] font-black uppercase text-emerald-800 block flex items-center gap-1">
-                <MessageCircle className="w-3 h-3 text-emerald-600" />
-                Auto-Drafted WhatsApp Message:
-              </span>
-              <p className="text-xs text-emerald-950 font-medium italic truncate">
-                "{whatsappMessage || 'Hi, great connecting with you!'}"
-              </p>
-            </div>
           </div>
 
-          {/* SECTION 3: Action Buttons (BIG SAVE BUTTON) */}
-          <div className="flex items-center justify-end gap-3 pt-2">
+          {/* =========================================
+              SECTION 3: Context & Updates (Collapsible)
+              (matches screenshot media_1794976840880_c273ff81.png)
+             ========================================= */}
+          <div className="rounded-xl border border-gray-200 overflow-hidden shadow-2xs">
+            <button
+              type="button"
+              onClick={() => toggleSection('context')}
+              className="w-full bg-[#faf5f8] px-4 py-3 flex items-center justify-between text-left hover:bg-pink-50/60 transition-colors"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-[#80235c] text-white flex items-center justify-center">
+                  <CalendarIcon className="w-4 h-4" />
+                </div>
+                <span className="font-bold text-gray-900 text-sm">
+                  Context & Updates
+                </span>
+              </div>
+              <div className="w-6 h-6 rounded-full bg-pink-100/70 text-[#80235c] flex items-center justify-center">
+                {openSections.context ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </div>
+            </button>
+
+            {openSections.context && (
+              <div className="p-4 sm:p-5 space-y-3.5 bg-white">
+                
+                {/* GPS Options & Use Current Location */}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-700">
+                    Gps options
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleDetectLocation}
+                    disabled={isLocating}
+                    className="flex items-center gap-1.5 text-xs font-bold text-[#80235c] hover:underline"
+                  >
+                    <Crosshair className={`w-3.5 h-3.5 ${isLocating ? 'animate-spin' : ''}`} />
+                    <span>{isLocating ? 'Detecting Location...' : 'Use Current Location'}</span>
+                  </button>
+                </div>
+
+                {/* Met at (Auto-detected location input) */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">
+                    Met at
+                  </label>
+                  <input
+                    type="text"
+                    value={metAt}
+                    onChange={(e) => setMetAt(e.target.value)}
+                    placeholder="Shaheed Major Rajeev Laul Marg, Janakpuri, Delhi, 110058, India"
+                    className="w-full px-3.5 py-2 rounded-xl border border-gray-200 text-xs font-medium text-gray-900 focus:outline-none focus:border-[#80235c]"
+                  />
+                </div>
+
+                {/* Met on * (Date Picker) */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">
+                    Met on <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      required
+                      value={metOn}
+                      onChange={(e) => setMetOn(e.target.value)}
+                      className="w-full px-3.5 py-2 rounded-xl border border-gray-200 text-xs font-medium text-gray-900 focus:outline-none focus:border-[#80235c]"
+                    />
+                  </div>
+                </div>
+
+                {/* Updates Textarea with Voice Record Pill Button inside */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">
+                    Updates
+                  </label>
+                  <div className="rounded-2xl border border-gray-200 focus-within:border-[#80235c] p-3 space-y-2 bg-white">
+                    <textarea
+                      rows={3}
+                      maxLength={500}
+                      value={updatesText}
+                      onChange={(e) => setUpdatesText(e.target.value)}
+                      placeholder="Summarize your conversation..."
+                      className="w-full text-xs font-medium text-gray-800 placeholder-gray-400 focus:outline-none resize-none leading-relaxed"
+                    />
+
+                    {/* Bottom Toolbar inside textarea */}
+                    <div className="flex items-center justify-between pt-1 border-t border-gray-100">
+                      {/* Voice Record Pill Button */}
+                      {!isRecording ? (
+                        <button
+                          type="button"
+                          onClick={startVoiceRecording}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#fdedee] text-[#80235c] hover:bg-pink-100/80 text-xs font-bold transition-all shadow-2xs"
+                          title="Record enhanced high-gain voice memo"
+                        >
+                          <Mic className="w-3.5 h-3.5 text-[#80235c]" />
+                          <span>Voice Record</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={stopVoiceRecording}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-600 text-white text-xs font-bold animate-pulse shadow-xs"
+                          title="Click to stop recording"
+                        >
+                          <MicOff className="w-3.5 h-3.5" />
+                          <span>Recording... ({recordingSeconds}s) Stop</span>
+                        </button>
+                      )}
+
+                      {/* Character Counter */}
+                      <span className="text-[10px] text-gray-400 font-mono">
+                        {updatesText.length} / 500
+                      </span>
+                    </div>
+
+                    {/* Audio Playback Wave if recorded */}
+                    {audioUrl && !isRecording && (
+                      <div className="flex items-center justify-between p-2 rounded-xl bg-gray-50 border border-gray-200 text-xs">
+                        <audio ref={audioElementRef} src={audioUrl} onEnded={() => setIsPlayingAudio(false)} className="hidden" />
+                        <button
+                          type="button"
+                          onClick={togglePlayAudio}
+                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#80235c] text-white text-[11px] font-bold"
+                        >
+                          {isPlayingAudio ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                          <span>{isPlayingAudio ? 'Playing' : 'Play Memo'}</span>
+                        </button>
+                        <span className="text-[10px] font-bold text-emerald-600">Audio Recorded ✓</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+              </div>
+            )}
+          </div>
+
+          {/* Bottom Actions Bar */}
+          <div className="flex items-center justify-end gap-3 pt-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition-all"
+              className="px-5 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
             >
               Cancel
             </button>
 
             <button
               type="submit"
-              className="px-6 py-2.5 rounded-xl bg-[#80235c] hover:bg-[#6a1b4b] text-white text-xs font-black shadow-md hover:shadow-lg hover:scale-102 active:scale-95 transition-all flex items-center gap-2"
+              className="px-6 py-2.5 rounded-xl bg-[#80235c] hover:bg-[#6a1b4b] text-white text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2 active:scale-95"
             >
               <Save className="w-4 h-4" />
-              <span>Save Connection</span>
+              <span>Save Contact</span>
             </button>
           </div>
 
