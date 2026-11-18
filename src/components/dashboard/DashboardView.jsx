@@ -48,6 +48,8 @@ export default function DashboardView({ onBackToLanding }) {
     deleteContact,
     updateContact,
     toggleFollowUpStatus,
+    clearAllContacts,
+    loadDemoContacts,
     addSpace,
     exportToCSV,
     currentUser,
@@ -60,7 +62,7 @@ export default function DashboardView({ onBackToLanding }) {
     switchUser
   } = useNetworkStore();
 
-  const [activePage, setActivePage] = useState('overview'); // 'overview' | 'contacts' | 'spaces' | 'reminders' | 'digital-card' | 'network-map' | 'founder'
+  const [activePage, setActivePage] = useState('contacts'); // Default to clean Contacts page!
   const [selectedContact, setSelectedContact] = useState(null);
   const [voiceModalOpen, setVoiceModalOpen] = useState(false);
   const [cardModalOpen, setCardModalOpen] = useState(false);
@@ -83,6 +85,7 @@ export default function DashboardView({ onBackToLanding }) {
         onOpenAddConnectionModal={() => setAddConnectionModalOpen(true)}
         onOpenAuthModal={() => setAuthModalOpen(true)}
         currentUser={currentUser}
+        contactsCount={contacts.length}
         pendingFollowUpsCount={pendingCount}
       />
 
@@ -215,6 +218,8 @@ export default function DashboardView({ onBackToLanding }) {
               onOpenVoiceModal={() => setVoiceModalOpen(true)}
               onOpenCardModal={() => setCardModalOpen(true)}
               onOpenAddConnection={() => setAddConnectionModalOpen(true)}
+              onClearAllContacts={clearAllContacts}
+              onLoadDemoContacts={loadDemoContacts}
               onExportCSV={exportToCSV}
             />
           )}

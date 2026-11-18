@@ -21,9 +21,10 @@ import {
   MessageCircle, 
   CheckCircle2, 
   FileText,
-  Radio,
   Sliders,
-  Check
+  Check,
+  Save,
+  RotateCcw
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -36,27 +37,20 @@ export default function AddConnectionModal({
 }) {
   if (!isOpen) return null;
 
-  // Active step / tab
-  const [activeTab, setActiveTab] = useState('details'); // 'details' | 'context' | 'followup'
-
   // Connection Profile Form
   const [formData, setFormData] = useState({
     name: '',
     role: '',
     company: '',
     event: '',
-    location: '',
     phone: '',
     email: '',
     linkedin: '',
-    instagram: '',
-    spaceId: activeSpaceId || 'all',
-    tags: ['Direct Meeting'],
-    tagInput: ''
+    spaceId: activeSpaceId || 'all'
   });
 
-  // Context: Text & Voice
-  const [contextMode, setContextMode] = useState('both'); // 'text' | 'voice' | 'both'
+  // Context Input Mode: 'text' | 'voice'
+  const [contextMode, setContextMode] = useState('text'); // 'text' | 'voice'
   const [textNotes, setTextNotes] = useState('');
   const [actionItem, setActionItem] = useState('');
   const [followUpDate, setFollowUpDate] = useState('Monday, 10:00 AM');
@@ -67,8 +61,8 @@ export default function AddConnectionModal({
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [audioUrl, setAudioUrl] = useState(null);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
-  const [sensitivityBoost, setSensitivityBoost] = useState(true); // 2.5x gain for whispering
-  const [audioVisualBars, setAudioVisualBars] = useState([10, 14, 8, 12, 16, 10, 14, 8]);
+  const [sensitivityBoost, setSensitivityBoost] = useState(true); // 2.5x gain boost for whispers
+  const [audioVisualBars, setAudioVisualBars] = useState([12, 18, 10, 24, 16, 20, 14, 28]);
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
@@ -78,122 +72,122 @@ export default function AddConnectionModal({
   const audioContextRef = useRef(null);
   const streamRef = useRef(null);
 
-  // Auto-generate WhatsApp draft when name/company changes
+  // Auto-generate WhatsApp draft when name or action item changes
   useEffect(() => {
     if (formData.name) {
       const firstName = formData.name.split(' ')[0];
       const eventPart = formData.event ? ` at ${formData.event}` : '';
-      const topicPart = actionItem ? ` Sharing the ${actionItem.toLowerCase()} as discussed.` : ' Looking forward to following up!';
-      setWhatsappMessage(`Hi ${firstName}, great connecting with you${eventPart}!${topicPart}`);
+      const topicPart = actionItem ? ` Following up regarding ${actionItem.toLowerCase()} as discussed.` : ' Great connecting with you!';
+      setWhatsappMessage(`Hi ${firstName},${eventPart}!${topicPart}`);
     }
   }, [formData.name, formData.event, actionItem]);
 
-  // Timer while recording
+  // Waveform animation during voice recording
   useEffect(() => {
     if (isRecording) {
       timerIntervalRef.current = setInterval(() => {
         setRecordingSeconds(s => s + 1);
-        // Randomize waveform bars during voice recording
         setAudioVisualBars([
-          Math.floor(Math.random() * 25) + 10,
-          Math.floor(Math.random() * 32) + 12,
-          Math.floor(Math.random() * 28) + 8,
-          Math.floor(Math.random() * 35) + 14,
           Math.floor(Math.random() * 26) + 10,
-          Math.floor(Math.random() * 30) + 12,
-          Math.floor(Math.random() * 22) + 8,
-          Math.floor(Math.random() * 34) + 10
+          Math.floor(Math.random() * 34) + 12,
+          Math.floor(Math.random() * 30) + 8,
+          Math.floor(Math.random() * 38) + 14,
+          Math.floor(Math.random() * 28) + 10,
+          Math.floor(Math.random() * 36) + 12,
+          Math.floor(Math.random() * 24) + 8,
+          Math.floor(Math.random() * 32) + 10,
         ]);
-      }, 150);
+      }, 500);
     } else {
-      clearInterval(timerIntervalRef.current);
-      setAudioVisualBars([10, 14, 8, 12, 16, 10, 14, 8]);
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     }
-    return () => clearInterval(timerIntervalRef.current);
+    return () => {
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    };
   }, [isRecording]);
 
-  // Start High-Sensitivity Audio Recording
+  // Start High Sensitivity Voice Note
   const startRecording = async () => {
-    setAudioUrl(null);
-    audioChunksRef.current = [];
-    setRecordingSeconds(0);
-
     try {
-      // 1. Microphone stream with autoGainControl to boost soft/quiet speech
-      const stream = await navigator.mediaDevices.getUserMedia({
+      const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
-          autoGainControl: true, // Amplifies soft whispers
           echoCancellation: true,
           noiseSuppression: true,
-          sampleRate: 48000
-        }
+          autoGainControl: true
+        } 
       });
       streamRef.current = stream;
 
-      // 2. Web Audio Gain Booster for high sensitivity
-      try {
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        if (AudioCtx) {
-          const audioCtx = new AudioCtx();
-          audioContextRef.current = audioCtx;
-          const source = audioCtx.createMediaStreamSource(stream);
-          const gainNode = audioCtx.createGain();
-          gainNode.gain.value = sensitivityBoost ? 2.2 : 1.0; // Boost whisper
-          const dest = audioCtx.createMediaStreamDestination();
-          source.connect(gainNode);
-          gainNode.connect(dest);
+      // 2.5x High-Gain Sensitivity Audio processing
+      let recordingStream = stream;
+      if (sensitivityBoost) {
+        try {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) {
+            const ctx = new AudioCtx();
+            audioContextRef.current = ctx;
+            const source = ctx.createMediaStreamSource(stream);
+            const gainNode = ctx.createGain();
+            gainNode.gain.value = 2.5; // 2.5x boost for quiet whispers
+            const destination = ctx.createMediaStreamDestination();
+            source.connect(gainNode);
+            gainNode.connect(destination);
+            recordingStream = destination.stream;
+          }
+        } catch (err) {
+          console.warn('Web Audio gain booster fallback:', err);
         }
-      } catch (err) {
-        console.warn('AudioContext boost fallback:', err);
       }
 
-      // 3. MediaRecorder
-      const mediaRecorder = new MediaRecorder(stream);
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+      const mediaRecorder = new MediaRecorder(recordingStream, { mimeType });
       mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
 
       mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          audioChunksRef.current.push(e.data);
-        }
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const url = URL.createObjectURL(blob);
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        const url = URL.createObjectURL(audioBlob);
         setAudioUrl(url);
       };
 
-      mediaRecorder.start();
+      mediaRecorder.start(250);
       setIsRecording(true);
+      setRecordingSeconds(0);
 
-      // 4. Web Speech API transcription
+      // Continuous Live Speech-to-Text
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (SpeechRecognition) {
-        try {
-          const rec = new SpeechRecognition();
-          rec.continuous = true;
-          rec.interimResults = true;
-          rec.lang = 'en-IN'; // Indian English / Hinglish
-          rec.onresult = (e) => {
-            let fullText = '';
-            for (let i = 0; i < e.results.length; i++) {
-              fullText += e.results[i][0].transcript + ' ';
-            }
-            if (fullText.trim()) {
-              setTextNotes(prev => {
-                const combined = prev ? `${prev}\n${fullText.trim()}` : fullText.trim();
-                return combined;
-              });
-            }
-          };
-          rec.start();
-          recognitionRef.current = rec;
-        } catch (e) {}
-      }
+        const recognition = new SpeechRecognition();
+        recognitionRef.current = recognition;
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-IN';
 
+        recognition.onresult = (event) => {
+          let transcript = '';
+          for (let i = 0; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript + ' ';
+          }
+          if (transcript.trim()) {
+            setTextNotes(prev => {
+              const cleaned = transcript.trim();
+              return cleaned;
+            });
+          }
+        };
+
+        recognition.onerror = (err) => {
+          console.warn('Speech recognition error:', err);
+        };
+
+        try { recognition.start(); } catch (e) {}
+      }
     } catch (err) {
-      console.error('Mic access error:', err);
-      alert('Could not access microphone. Please allow microphone permissions in your browser.');
+      alert('Microphone permission required for voice notes. You can also type notes manually below!');
     }
   };
 
@@ -226,30 +220,11 @@ export default function AddConnectionModal({
     }
   };
 
-  // Add Tag
-  const handleAddTag = () => {
-    if (formData.tagInput.trim() && !formData.tags.includes(formData.tagInput.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        tags: [...prev.tags, prev.tagInput.trim()],
-        tagInput: ''
-      }));
-    }
-  };
-
-  const handleRemoveTag = (t) => {
-    setFormData(prev => ({
-      ...prev,
-      tags: prev.tags.filter(tag => tag !== t)
-    }));
-  };
-
   // Submit & Save Connection
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.name.trim()) {
       alert('Please enter connection name.');
-      setActiveTab('details');
       return;
     }
 
@@ -260,15 +235,14 @@ export default function AddConnectionModal({
       name: formData.name.trim(),
       role: formData.role.trim() || 'Professional',
       company: formData.company.trim() || 'Direct Network',
-      event: formData.event.trim() || 'Direct Meeting',
-      location: formData.location.trim() || formData.event.trim() || 'In-person Meeting',
+      event: formData.event.trim() || 'In-person Meeting',
+      location: formData.event.trim() || 'Direct Meeting',
       phone: formData.phone.trim(),
       email: formData.email.trim(),
       linkedin: formData.linkedin.trim(),
-      instagram: formData.instagram.trim(),
       spaceId: formData.spaceId || 'all',
-      tags: formData.tags.length > 0 ? formData.tags : ['Networking'],
-      rawNotes: textNotes.trim() || 'Met during networking event.',
+      tags: [formData.company || 'Networking', formData.event || 'Direct'].filter(Boolean),
+      rawNotes: textNotes.trim() || 'Met in person.',
       topicsDiscussed: textNotes.trim() ? [textNotes.trim()] : ['Initial connection established.'],
       actionItem: actionItem.trim() || 'Send follow-up details on WhatsApp.',
       followUpDate: followUpDate || 'Monday, 10:00 AM',
@@ -282,488 +256,316 @@ export default function AddConnectionModal({
     };
 
     onSaveContact(newContact);
-    try { confetti({ particleCount: 60, spread: 70 }); } catch (e) {}
+    try { confetti({ particleCount: 70, spread: 75, origin: { y: 0.6 } }); } catch (e) {}
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn overflow-y-auto">
-      <div className="bg-white w-full max-w-2xl rounded-3xl p-6 sm:p-8 shadow-2xl border border-pink-100 relative my-8 space-y-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn overflow-y-auto">
+      <div className="bg-white w-full max-w-xl rounded-3xl p-5 sm:p-7 shadow-2xl border border-pink-100 relative my-6 space-y-5 max-h-[92vh] overflow-y-auto">
         
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 w-8 h-8 rounded-full bg-gray-100 text-gray-500 hover:text-gray-900 flex items-center justify-center hover:bg-gray-200 transition-colors"
+          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 text-gray-500 hover:text-gray-900 flex items-center justify-center hover:bg-gray-200 transition-colors"
+          title="Close modal"
         >
           <X className="w-4 h-4" />
         </button>
 
         {/* Modal Header */}
-        <div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-pink-50 text-[#80235c] text-xs font-bold mb-2">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Add New Relationship Memory</span>
+        <div className="pr-8">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#fdedee] text-[#80235c] text-xs font-bold mb-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-[#80235c]" />
+            <span>New Relationship</span>
           </div>
-          <h3 className="text-2xl font-extrabold text-gray-900">
-            Log a Connection & Context
+          <h3 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
+            Add Connection & Context
           </h3>
-          <p className="text-xs text-gray-500 mt-1">
-            Capture contact details, venue, conversation notes as voice or text, and auto-draft follow-up.
+          <p className="text-xs text-gray-500">
+            Save contact details along with conversation context (type manually or record enhanced voice).
           </p>
-        </div>
-
-        {/* 3 Step Tabs */}
-        <div className="flex border-b border-gray-200 pb-2 gap-2 text-xs font-bold">
-          <button
-            type="button"
-            onClick={() => setActiveTab('details')}
-            className={`pb-2 px-3 border-b-2 transition-all flex items-center gap-1.5 ${
-              activeTab === 'details'
-                ? 'border-[#80235c] text-[#80235c]'
-                : 'border-transparent text-gray-500 hover:text-gray-800'
-            }`}
-          >
-            <User className="w-4 h-4" />
-            <span>1. Profile & Venue</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('context')}
-            className={`pb-2 px-3 border-b-2 transition-all flex items-center gap-1.5 ${
-              activeTab === 'context'
-                ? 'border-[#80235c] text-[#80235c]'
-                : 'border-transparent text-gray-500 hover:text-gray-800'
-            }`}
-          >
-            <Mic className="w-4 h-4" />
-            <span>2. Context (Voice & Text)</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('followup')}
-            className={`pb-2 px-3 border-b-2 transition-all flex items-center gap-1.5 ${
-              activeTab === 'followup'
-                ? 'border-[#80235c] text-[#80235c]'
-                : 'border-transparent text-gray-500 hover:text-gray-800'
-            }`}
-          >
-            <MessageCircle className="w-4 h-4" />
-            <span>3. Smart Follow-Up</span>
-          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           
-          {/* TAB 1: Profile & Venue */}
-          {activeTab === 'details' && (
-            <div className="space-y-3.5 animate-fadeIn">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block mb-1">
-                    Contact Name *
-                  </label>
-                  <div className="relative">
-                    <User className="absolute left-3.5 top-3 w-4 h-4 text-gray-400" />
-                    <input
-                      type="text"
-                      required
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="e.g. Sameer Verma"
-                      className="w-full pl-10 pr-3 py-2.5 rounded-2xl bg-gray-50 border border-gray-200 focus:border-[#80235c] focus:bg-white text-xs sm:text-sm font-semibold text-gray-900 focus:outline-none"
-                    />
-                  </div>
-                </div>
+          {/* SECTION 1: Person Details */}
+          <div className="bg-gray-50/80 p-4 rounded-2xl border border-gray-200/70 space-y-3">
+            <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">
+              1. Contact Information
+            </span>
 
-                <div>
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block mb-1">
-                    Role / Designation
-                  </label>
+            <div className="space-y-2.5">
+              <div>
+                <label className="text-xs font-bold text-gray-700 block mb-1">
+                  Full Name <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
                   <input
                     type="text"
-                    value={formData.role}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                    placeholder="e.g. Sr. Cloud Solutions Architect"
-                    className="w-full px-4 py-2.5 rounded-2xl bg-gray-50 border border-gray-200 focus:border-[#80235c] focus:bg-white text-xs sm:text-sm font-semibold text-gray-900 focus:outline-none"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="e.g. Rohan Sharma"
+                    className="w-full pl-9 pr-3 py-2 rounded-xl bg-white border border-gray-200 focus:border-[#80235c] text-xs font-bold text-gray-900 focus:outline-none"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block mb-1">
-                    Company / Organization *
-                  </label>
+                  <label className="text-xs font-bold text-gray-700 block mb-1">Company / College</label>
                   <div className="relative">
-                    <Building2 className="absolute left-3.5 top-3 w-4 h-4 text-gray-400" />
+                    <Building2 className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
                     <input
                       type="text"
                       value={formData.company}
                       onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                      placeholder="e.g. Microsoft / IIT Delhi / BharatCart"
-                      className="w-full pl-10 pr-3 py-2.5 rounded-2xl bg-gray-50 border border-gray-200 focus:border-[#80235c] focus:bg-white text-xs sm:text-sm font-semibold text-gray-900 focus:outline-none"
+                      placeholder="e.g. Microsoft / IIT Delhi"
+                      className="w-full pl-9 pr-3 py-2 rounded-xl bg-white border border-gray-200 focus:border-[#80235c] text-xs font-medium text-gray-800 focus:outline-none"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block mb-1">
-                    Event & Venue / Place
-                  </label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3.5 top-3 w-4 h-4 text-gray-400" />
-                    <input
-                      type="text"
-                      value={formData.location}
-                      onChange={(e) => setFormData({ ...formData, location: e.target.value, event: e.target.value })}
-                      placeholder="e.g. Microsoft Reactor Bengaluru, Lavelle Road"
-                      className="w-full pl-10 pr-3 py-2.5 rounded-2xl bg-gray-50 border border-gray-200 focus:border-[#80235c] focus:bg-white text-xs sm:text-sm font-semibold text-gray-900 focus:outline-none"
-                    />
-                  </div>
+                  <label className="text-xs font-bold text-gray-700 block mb-1">Role / Designation</label>
+                  <input
+                    type="text"
+                    value={formData.role}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                    placeholder="e.g. Founder / Developer"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-gray-200 focus:border-[#80235c] text-xs font-medium text-gray-800 focus:outline-none"
+                  />
                 </div>
               </div>
 
-              {/* Contact info (optional) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block mb-1">
-                    Phone Number (WhatsApp)
-                  </label>
+                  <label className="text-xs font-bold text-gray-700 block mb-1">Meeting Place / Event</label>
                   <div className="relative">
-                    <Phone className="absolute left-3.5 top-3 w-4 h-4 text-emerald-600" />
+                    <MapPin className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
                     <input
                       type="text"
+                      value={formData.event}
+                      onChange={(e) => setFormData({ ...formData, event: e.target.value })}
+                      placeholder="e.g. Bengaluru Summit / Hackathon"
+                      className="w-full pl-9 pr-3 py-2 rounded-xl bg-white border border-gray-200 focus:border-[#80235c] text-xs font-medium text-gray-800 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-gray-700 block mb-1">Phone / WhatsApp (Optional)</label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                    <input
+                      type="tel"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="+91 98112 34567"
-                      className="w-full pl-10 pr-3 py-2.5 rounded-2xl bg-gray-50 border border-gray-200 focus:border-[#80235c] focus:bg-white text-xs sm:text-sm font-medium text-gray-900 focus:outline-none"
+                      placeholder="+91 98765 43210"
+                      className="w-full pl-9 pr-3 py-2 rounded-xl bg-white border border-gray-200 focus:border-[#80235c] text-xs font-medium text-gray-800 focus:outline-none"
                     />
                   </div>
                 </div>
-
-                <div>
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block mb-1">
-                    Email Address
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3.5 top-3 w-4 h-4 text-blue-600" />
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="sameer@microsoft.com"
-                      className="w-full pl-10 pr-3 py-2.5 rounded-2xl bg-gray-50 border border-gray-200 focus:border-[#80235c] focus:bg-white text-xs sm:text-sm font-medium text-gray-900 focus:outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Social Profiles */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block mb-1">
-                    LinkedIn Profile URL
-                  </label>
-                  <div className="relative">
-                    <Linkedin className="absolute left-3.5 top-3 w-4 h-4 text-blue-700" />
-                    <input
-                      type="text"
-                      value={formData.linkedin}
-                      onChange={(e) => setFormData({ ...formData, linkedin: e.target.value })}
-                      placeholder="linkedin.com/in/username"
-                      className="w-full pl-10 pr-3 py-2.5 rounded-2xl bg-gray-50 border border-gray-200 focus:border-[#80235c] focus:bg-white text-xs sm:text-sm font-medium text-gray-900 focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block mb-1">
-                    Instagram Handle
-                  </label>
-                  <div className="relative">
-                    <Instagram className="absolute left-3.5 top-3 w-4 h-4 text-pink-600" />
-                    <input
-                      type="text"
-                      value={formData.instagram}
-                      onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
-                      placeholder="@username"
-                      className="w-full pl-10 pr-3 py-2.5 rounded-2xl bg-gray-50 border border-gray-200 focus:border-[#80235c] focus:bg-white text-xs sm:text-sm font-medium text-gray-900 focus:outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-2 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('context')}
-                  className="px-5 py-2.5 rounded-2xl bg-[#80235c] text-white font-bold text-xs hover:bg-[#6a1b4b] transition-all shadow-xs"
-                >
-                  Next: Add Context & Voice Note →
-                </button>
               </div>
             </div>
-          )}
+          </div>
 
-          {/* TAB 2: Context (Text & High-Sensitivity Voice Note) */}
-          {activeTab === 'context' && (
-            <div className="space-y-4 animate-fadeIn">
-              
-              {/* Sensitivity Booster toggle banner */}
-              <div className="p-3 bg-purple-50/70 border border-purple-200 rounded-2xl flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Sliders className="w-4 h-4 text-[#80235c]" />
-                  <div>
-                    <span className="text-xs font-bold text-purple-900 block">High-Sensitivity Audio Mode Active</span>
-                    <span className="text-[10px] text-purple-700">Auto-Gain Control boosts quiet speech so whispers are transcribed accurately.</span>
-                  </div>
-                </div>
+          {/* SECTION 2: Conversation Context (TWO CLEAR OPTIONS: TYPE or VOICE) */}
+          <div className="bg-pink-50/40 p-4 rounded-2xl border border-pink-200/80 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-wider text-[#80235c] block">
+                2. Conversation Context (Kya Baat Hui Thi)
+              </span>
+
+              {/* TWO CLEAR TOGGLE BUTTONS */}
+              <div className="flex bg-white p-1 rounded-xl border border-pink-200 shadow-2xs">
                 <button
                   type="button"
-                  onClick={() => setSensitivityBoost(!sensitivityBoost)}
-                  className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all ${
-                    sensitivityBoost ? 'bg-[#80235c] text-white' : 'bg-gray-200 text-gray-700'
+                  onClick={() => setContextMode('text')}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    contextMode === 'text'
+                      ? 'bg-[#80235c] text-white shadow-2xs'
+                      : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
-                  {sensitivityBoost ? 'Gain: 2.5x ON' : 'Gain: 1.0x'}
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Type Manually</span>
                 </button>
-              </div>
 
-              {/* Voice Recording Control Box */}
-              <div className="p-4 bg-pink-50/50 border border-pink-200 rounded-3xl space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-gray-900">Voice Note Memo:</span>
-                    {isRecording ? (
-                      <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 text-[10px] font-bold animate-pulse flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-ping" />
-                        Listening ({recordingSeconds}s)...
-                      </span>
-                    ) : audioUrl ? (
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                        Audio Saved (Playable)
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-gray-500 font-medium">Record 15-30s meeting memo</span>
-                    )}
-                  </div>
-
-                  {/* Soundwave bars */}
-                  <div className="flex items-center gap-1">
-                    {audioVisualBars.map((h, idx) => (
-                      <span
-                        key={idx}
-                        className={`w-1 rounded-full transition-all duration-150 ${
-                          isRecording ? 'bg-[#80235c]' : 'bg-gray-300'
-                        }`}
-                        style={{ height: `${h}px` }}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3">
-                  {!isRecording ? (
-                    <button
-                      type="button"
-                      onClick={startRecording}
-                      className="px-5 py-2.5 rounded-full bg-[#80235c] hover:bg-[#6a1b4b] text-white text-xs font-bold shadow-xs hover:scale-102 active:scale-95 transition-all flex items-center gap-2"
-                    >
-                      <Mic className="w-4 h-4 animate-pulse" />
-                      <span>{audioUrl ? 'Record Again' : 'Start Voice Recording'}</span>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={stopRecording}
-                      className="px-5 py-2.5 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md hover:scale-102 active:scale-95 transition-all flex items-center gap-2"
-                    >
-                      <MicOff className="w-4 h-4" />
-                      <span>Stop & Save Voice Note</span>
-                    </button>
-                  )}
-
-                  {audioUrl && !isRecording && (
-                    <button
-                      type="button"
-                      onClick={togglePlayAudio}
-                      className="px-4 py-2 rounded-full bg-white hover:bg-gray-50 text-gray-800 border border-gray-200 text-xs font-bold shadow-2xs transition-all flex items-center gap-2"
-                    >
-                      {isPlayingAudio ? <Pause className="w-3.5 h-3.5 text-[#80235c]" /> : <Play className="w-3.5 h-3.5 text-[#80235c]" />}
-                      <span>{isPlayingAudio ? 'Pause' : 'Play Recorded Audio'}</span>
-                    </button>
-                  )}
-
-                  {audioUrl && (
-                    <audio
-                      ref={audioElementRef}
-                      src={audioUrl}
-                      onEnded={() => setIsPlayingAudio(false)}
-                      className="hidden"
-                    />
-                  )}
-                </div>
-              </div>
-
-              {/* Text Notes Area (Stores both speech text and manual notes) */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Conversation Notes / What was discussed:
-                  </label>
-                  <span className="text-[10px] text-gray-500">Auto-transcribed from voice or type directly</span>
-                </div>
-                <textarea
-                  rows={4}
-                  value={textNotes}
-                  onChange={(e) => setTextNotes(e.target.value)}
-                  placeholder="e.g. Met Sameer at Microsoft Reactor Bengaluru. Discussed Azure OpenAI GPT-4o latency benchmarks and $25,000 Founders Hub credits. Asked to send architecture diagram."
-                  className="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-gray-200 focus:border-[#80235c] focus:bg-white text-xs sm:text-sm font-medium text-gray-900 focus:outline-none transition-all leading-relaxed"
-                />
-              </div>
-
-              <div className="pt-2 flex justify-between">
                 <button
                   type="button"
-                  onClick={() => setActiveTab('details')}
-                  className="px-4 py-2 rounded-xl text-gray-600 hover:text-gray-900 font-bold text-xs"
+                  onClick={() => setContextMode('voice')}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    contextMode === 'voice'
+                      ? 'bg-[#80235c] text-white shadow-2xs'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
                 >
-                  ← Back to Details
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('followup')}
-                  className="px-5 py-2.5 rounded-2xl bg-[#80235c] text-white font-bold text-xs hover:bg-[#6a1b4b] transition-all shadow-xs"
-                >
-                  Next: Smart Follow-Up →
+                  <Mic className="w-3.5 h-3.5" />
+                  <span>Voice Note (High-Gain)</span>
                 </button>
               </div>
             </div>
-          )}
 
-          {/* TAB 3: Smart Follow-Up & Tags */}
-          {activeTab === 'followup' && (
-            <div className="space-y-4 animate-fadeIn">
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* OPTION 1: Type Context Manually */}
+            {contextMode === 'text' && (
+              <div className="space-y-2.5 animate-fadeIn">
                 <div>
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block mb-1">
-                    Action Item / Commitment
+                  <label className="text-xs font-bold text-gray-700 block mb-1">
+                    What did you talk about? (Discussion Points)
                   </label>
-                  <input
-                    type="text"
-                    value={actionItem}
-                    onChange={(e) => setActionItem(e.target.value)}
-                    placeholder="e.g. Send architecture proposal & pitch deck"
-                    className="w-full px-4 py-2.5 rounded-2xl bg-gray-50 border border-gray-200 focus:border-[#80235c] focus:bg-white text-xs sm:text-sm font-semibold text-gray-900 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block mb-1">
-                    Follow-Up Due Date
-                  </label>
-                  <input
-                    type="text"
-                    value={followUpDate}
-                    onChange={(e) => setFollowUpDate(e.target.value)}
-                    placeholder="e.g. Monday, 10:00 AM"
-                    className="w-full px-4 py-2.5 rounded-2xl bg-gray-50 border border-gray-200 focus:border-[#80235c] focus:bg-white text-xs sm:text-sm font-semibold text-gray-900 focus:outline-none"
+                  <textarea
+                    rows={3}
+                    value={textNotes}
+                    onChange={(e) => setTextNotes(e.target.value)}
+                    placeholder="e.g. Discussed AI partnership, latency benchmarks on Azure/Google Cloud, agreed to collaborate on prototype..."
+                    className="w-full p-3 rounded-xl bg-white border border-gray-200 focus:border-[#80235c] text-xs font-medium text-gray-800 focus:outline-none resize-none leading-relaxed"
                   />
                 </div>
               </div>
+            )}
 
-              {/* 1-Click WhatsApp Draft Preview */}
-              <div>
-                <label className="text-xs font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5 mb-1">
-                  <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
-                  Auto-Crafted WhatsApp Message:
-                </label>
-                <textarea
-                  rows={2}
-                  value={whatsappMessage}
-                  onChange={(e) => setWhatsappMessage(e.target.value)}
-                  placeholder="Hi Rohan, great connecting at Delhi summit! Sharing our pitch deck as discussed."
-                  className="w-full px-4 py-2.5 rounded-2xl bg-emerald-50/40 border border-emerald-200 text-xs sm:text-sm font-medium text-emerald-950 focus:outline-none"
-                />
-              </div>
+            {/* OPTION 2: High Sensitivity Voice Note Mode */}
+            {contextMode === 'voice' && (
+              <div className="space-y-3 animate-fadeIn">
+                <div className="bg-white p-4 rounded-xl border border-pink-200/80 text-center space-y-3">
+                  
+                  {/* Sensitivity pill indicator */}
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-black">
+                    <Sliders className="w-3 h-3 text-emerald-600" />
+                    <span>Enhanced 2.5x Gain Boost (Dhire se bolne par bhi crystal clear)</span>
+                  </div>
 
-              {/* Tags & Space selection */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
-                  Tags & Event Space
-                </label>
-                <div className="flex flex-wrap gap-1.5 items-center">
-                  {formData.tags.map(t => (
-                    <span
-                      key={t}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-pink-100 text-[#80235c] text-xs font-bold"
-                    >
-                      #{t}
-                      <button type="button" onClick={() => handleRemoveTag(t)}>
-                        <X className="w-3 h-3 hover:text-rose-600" />
+                  {/* Big Record Microphone Button */}
+                  <div className="flex flex-col items-center justify-center gap-2 pt-1">
+                    {!isRecording ? (
+                      <button
+                        type="button"
+                        onClick={startRecording}
+                        className="w-16 h-16 rounded-full bg-[#80235c] hover:bg-[#6a1b4b] text-white flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all"
+                        title="Click to start speaking"
+                      >
+                        <Mic className="w-7 h-7" />
                       </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={stopRecording}
+                        className="w-16 h-16 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-lg animate-pulse"
+                        title="Click to stop speaking"
+                      >
+                        <MicOff className="w-7 h-7" />
+                      </button>
+                    )}
+
+                    <span className="text-xs font-extrabold text-gray-800">
+                      {isRecording ? `Recording... (${recordingSeconds}s) - Speak Now` : 'Tap Mic & Speak 15-sec Memo'}
                     </span>
-                  ))}
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="text"
-                      value={formData.tagInput}
-                      onChange={(e) => setFormData({ ...formData, tagInput: e.target.value })}
-                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag(); } }}
-                      placeholder="Add tag (e.g. Fintech, AI)..."
-                      className="px-3 py-1 rounded-xl bg-gray-50 border border-gray-200 text-xs focus:outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddTag}
-                      className="px-2.5 py-1 rounded-xl bg-gray-100 hover:bg-gray-200 text-xs font-bold text-gray-700"
-                    >
-                      + Add
-                    </button>
                   </div>
+
+                  {/* Animated Waveform Visualizer */}
+                  {isRecording && (
+                    <div className="flex items-center justify-center gap-1 h-8">
+                      {audioVisualBars.map((h, i) => (
+                        <span
+                          key={i}
+                          className="w-1.5 bg-[#80235c] rounded-full transition-all duration-200"
+                          style={{ height: `${h}px` }}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Playback if audio is recorded */}
+                  {audioUrl && !isRecording && (
+                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-gray-50 border border-gray-200">
+                      <audio ref={audioElementRef} src={audioUrl} onEnded={() => setIsPlayingAudio(false)} className="hidden" />
+                      <button
+                        type="button"
+                        onClick={togglePlayAudio}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#80235c] text-white text-xs font-bold"
+                      >
+                        {isPlayingAudio ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                        <span>{isPlayingAudio ? 'Playing Voice Note' : 'Listen Back Voice Memo'}</span>
+                      </button>
+                      <span className="text-xs font-mono font-bold text-gray-500">Audio Saved ✓</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Live Speech-to-Text Transcribed Result */}
+                <div>
+                  <label className="text-xs font-bold text-gray-700 block mb-1">
+                    Live Transcribed Text (Edit if needed):
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={textNotes}
+                    onChange={(e) => setTextNotes(e.target.value)}
+                    placeholder="Speaking will automatically transcribe words into text here..."
+                    className="w-full p-2.5 rounded-xl bg-white border border-gray-200 focus:border-[#80235c] text-xs font-medium text-gray-800 focus:outline-none resize-none leading-relaxed"
+                  />
                 </div>
               </div>
+            )}
 
-              {/* Space Selection */}
+            {/* Next Step / Action Item */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
               <div>
-                <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block mb-1">
-                  Save to Space:
-                </label>
-                <select
-                  value={formData.spaceId}
-                  onChange={(e) => setFormData({ ...formData, spaceId: e.target.value })}
-                  className="w-full px-3 py-2 rounded-2xl bg-gray-50 border border-gray-200 text-xs font-bold text-gray-800 focus:outline-none"
-                >
-                  <option value="all">Global (All Contacts)</option>
-                  {spaces.filter(s => s.id !== 'all').map(s => (
-                    <option key={s.id} value={s.id}>{s.name} ({s.badge})</option>
-                  ))}
-                </select>
+                <label className="text-xs font-bold text-gray-700 block mb-1">Next Step / Action Item</label>
+                <input
+                  type="text"
+                  value={actionItem}
+                  onChange={(e) => setActionItem(e.target.value)}
+                  placeholder="e.g. Send pitch deck on WhatsApp"
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-gray-200 focus:border-[#80235c] text-xs font-medium text-gray-800 focus:outline-none"
+                />
               </div>
 
-              <div className="pt-3 flex items-center justify-between border-t border-gray-100">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('context')}
-                  className="px-4 py-2 rounded-xl text-gray-600 hover:text-gray-900 font-bold text-xs"
-                >
-                  ← Back
-                </button>
-
-                <button
-                  type="submit"
-                  className="px-6 py-3 rounded-2xl bg-[#80235c] hover:bg-[#6a1b4b] text-white font-bold text-sm shadow-md hover:scale-102 active:scale-95 transition-all flex items-center gap-2"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Save Relationship Memory</span>
-                </button>
+              <div>
+                <label className="text-xs font-bold text-gray-700 block mb-1">Follow-up Due</label>
+                <input
+                  type="text"
+                  value={followUpDate}
+                  onChange={(e) => setFollowUpDate(e.target.value)}
+                  placeholder="e.g. Monday, 10:00 AM"
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-gray-200 focus:border-[#80235c] text-xs font-medium text-gray-800 focus:outline-none"
+                />
               </div>
-
             </div>
-          )}
+
+            {/* WhatsApp Follow-up message preview */}
+            <div className="bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-200/80 space-y-1">
+              <span className="text-[10px] font-black uppercase text-emerald-800 block flex items-center gap-1">
+                <MessageCircle className="w-3 h-3 text-emerald-600" />
+                Auto-Drafted WhatsApp Message:
+              </span>
+              <p className="text-xs text-emerald-950 font-medium italic truncate">
+                "{whatsappMessage || 'Hi, great connecting with you!'}"
+              </p>
+            </div>
+          </div>
+
+          {/* SECTION 3: Action Buttons (BIG SAVE BUTTON) */}
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-5 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition-all"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              className="px-6 py-2.5 rounded-xl bg-[#80235c] hover:bg-[#6a1b4b] text-white text-xs font-black shadow-md hover:shadow-lg hover:scale-102 active:scale-95 transition-all flex items-center gap-2"
+            >
+              <Save className="w-4 h-4" />
+              <span>Save Connection</span>
+            </button>
+          </div>
 
         </form>
 

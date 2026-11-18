@@ -304,26 +304,20 @@ export function useNetworkStore() {
     }
   });
 
-  // Contacts Vault
+  // Contacts Vault (Defaults to EMPTY so user saves their own REAL data without fake clutter!)
   const [contacts, setContacts] = useState(() => {
     try {
       const saved = localStorage.getItem('mynetworkk_contacts');
-      if (saved) {
+      if (saved !== null) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const existingIds = new Set(parsed.map(c => c.id));
-          const missingDefaults = INITIAL_CONTACTS.filter(c => !existingIds.has(c.id));
-          if (missingDefaults.length > 0) {
-            const merged = [...parsed, ...missingDefaults];
-            localStorage.setItem('mynetworkk_contacts', JSON.stringify(merged));
-            return merged;
-          }
+        if (Array.isArray(parsed)) {
           return parsed;
         }
       }
-      return INITIAL_CONTACTS;
+      // Start completely fresh and empty for real user data
+      return [];
     } catch (e) {
-      return INITIAL_CONTACTS;
+      return [];
     }
   });
 
@@ -495,6 +489,22 @@ export function useNetworkStore() {
     }));
   };
 
+  // Clear all contacts (to wipe demo data and start 100% fresh)
+  const clearAllContacts = () => {
+    setContacts([]);
+    try {
+      localStorage.setItem('mynetworkk_contacts', JSON.stringify([]));
+    } catch (e) {}
+  };
+
+  // Optional: load demo contacts only if user explicitly asks to preview
+  const loadDemoContacts = () => {
+    setContacts(INITIAL_CONTACTS);
+    try {
+      localStorage.setItem('mynetworkk_contacts', JSON.stringify(INITIAL_CONTACTS));
+    } catch (e) {}
+  };
+
   const addSpace = (spaceName, badge = 'Event') => {
     if (!spaceName.trim()) return;
     const newSpace = {
@@ -575,6 +585,8 @@ export function useNetworkStore() {
     deleteContact,
     updateContact,
     toggleFollowUpStatus,
+    clearAllContacts,
+    loadDemoContacts,
     addSpace,
     exportToCSV
   };
