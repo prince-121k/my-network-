@@ -80,13 +80,15 @@ export default function DashboardView({ onBackToLanding }) {
 
           <div 
             onClick={() => setActivePage('contacts')}
-            className="flex items-center gap-2 cursor-pointer"
+            className="flex items-center gap-2.5 cursor-pointer"
           >
-            <div className="w-8 h-8 rounded-xl bg-pink-100 text-[#80235c] flex items-center justify-center font-black text-xl shadow-2xs">
-              ✻
+            <div className="w-8 h-8 rounded-xl bg-[#80235c] text-white flex items-center justify-center shadow-2xs">
+              <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                <path d="M12 2L13.5 8.5L20 7L15.5 12L20 17L13.5 15.5L12 22L10.5 15.5L4 17L8.5 12L4 7L10.5 8.5L12 2Z" />
+              </svg>
             </div>
-            <span className="text-xl font-extrabold text-[#80235c] tracking-tight">
-              All Buddy
+            <span className="text-xl font-black text-gray-900 tracking-tight">
+              mynetworkk<span className="text-[#80235c]">.ai</span>
             </span>
           </div>
         </div>
